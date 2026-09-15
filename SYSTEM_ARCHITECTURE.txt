@@ -1,0 +1,16 @@
+IRON SYSTEM
+
+IRON PC / PC-Agent
+        |
+        v
+Appwrite Cloud
+   |        |
+   |        +--> AI Function / News / Stocks / Weather
+   |
+   +--> Android IRON App
+           |- HUD + images
+           |- Speech recognition
+           |- Male-style German TTS
+           |- Local task notifications
+           |- Phone dial/direct call while app is visible
+           |- Future: Push commands from PC in background

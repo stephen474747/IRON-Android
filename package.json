@@ -1,0 +1,23 @@
+{
+  "name": "iron-android",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:mobile": "esbuild src/mobile.js --bundle --platform=browser --format=iife --global-name=IRONMobileBundle --outfile=www/mobile-bridge.js",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/camera": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor-community/text-to-speech": "8.0.2",
+    "@capgo/capacitor-speech-recognition": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "esbuild": "^0.25.0"
+  }
+}

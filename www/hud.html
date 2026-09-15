@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02070c">
+<title>IRON // HUD</title>
+<link rel="stylesheet" href="style.css?v=200">
+</head>
+<body class="hud-body">
+<div class="grid hud-grid"></div><div class="scanlines"></div>
+
+<header class="hud-top">
+  <a class="brand" href="index.html"><span class="mark">I</span><div><b>IRON</b><small>HUD SYSTEM</small></div></a>
+  <div class="hud-timebox"><span id="hudDate">--.--.----</span><b id="hudTime">--:--:--</b></div>
+  <div class="status"><i></i> CLOUD <b id="cloudStatus">CONNECTING</b></div>
+</header>
+
+<main class="hud-main">
+  <section class="hud-panel hud-left-top">
+    <header>WETTER</header>
+    <p>Cloud-Modul bereit</p>
+    <button data-command="Wie ist das Wetter heute?">WETTER ABFRAGEN</button>
+  </section>
+
+  <section class="hud-panel hud-right-top">
+    <header>NACHRICHTEN / GMAIL</header>
+    <div id="hudNews" class="hud-live-list"><p>News bereit zum Laden.</p></div>
+    <button id="newsBtn">LIVE NEWS</button>
+    <button id="gmailBtn">GMAIL VERBINDEN / LADEN</button>
+    <small id="gmailState">GMAIL: NICHT VERBUNDEN</small>
+  </section>
+
+  <section class="hud-center">
+    <div class="hud-system-title">I R O N&nbsp;&nbsp; S Y S T E M</div>
+    <div class="reactor">
+      <div class="reactor-ring r1"></div>
+      <div class="reactor-ring r2"></div>
+      <div class="reactor-ring r3"></div>
+      <div class="reactor-core"><span>I</span></div>
+    </div>
+    <div class="hud-voice-state" id="voiceStatus">STANDBY</div>
+    <button class="hud-talk" id="voiceBtn">⌁ TALK TO IRON</button>
+
+    <div class="hud-command command">
+      <span>&gt;</span><input id="commandInput" placeholder="IRON Befehl..." autocomplete="off"><button id="sendBtn">SEND</button>
+    </div>
+
+    <section class="hud-response">
+      <header>IRON RESPONSE // TEXT CHANNEL <b id="speechStatus">READY</b></header>
+      <div id="response">System bereit.</div>
+      <div id="hudAnswer">Antworten erscheinen hier immer als Text.</div>
+      <div id="answerText" hidden></div>
+    </section>
+  </section>
+
+  <section class="hud-panel hud-left-mid">
+    <header>AKTIEN / FINANZEN</header>
+    <div id="hudStocks" class="hud-live-list"><p>Kurse bereit zum Laden.</p></div>
+    <button id="stocksBtn">LIVE KURSE</button>
+  </section>
+
+  <section class="hud-panel hud-right-mid">
+    <header>VISION / BILD</header>
+    <div class="hud-image-stage" id="hudImageStage">
+      <img id="hudImage" alt="IRON Vision Bild">
+      <div id="hudImageEmpty">NO IMAGE</div>
+    </div>
+    <button id="uploadBtn">BILD AUSWÄHLEN</button>
+    <input id="imageInput" type="file" accept="image/*" hidden>
+    <button id="clearImageBtn">BILD LÖSCHEN</button>
+    <button data-command="Öffne Vision Modus">VISION → PC</button>
+  </section>
+
+  <section class="hud-panel hud-left-bottom">
+    <header>DATA CORE</header>
+    <div class="hud-metric"><span>OFFENE TASKS</span><b id="hudTaskCount">0</b></div>
+    <div class="hud-metric"><span>PLÄNE</span><b id="hudPlanCount">0</b></div>
+    <div class="hud-metric"><span>EINKAUF</span><b id="hudShoppingCount">0</b></div>
+    <div class="hud-links">
+      <a href="task.html">TASKS</a><a href="plans.html">PLANS</a><a href="einkaufsliste.html">SHOP</a>
+    </div>
+  </section>
+
+  <section class="hud-panel hud-right-bottom">
+    <header>SYSTEM STATUS</header>
+    <div class="hud-metric"><span>CLOUD</span><b id="hudCloud">OFFLINE</b></div>
+    <div class="hud-metric"><span>PC AGENT</span><b id="hudPC">OFFLINE</b></div>
+    <div class="hud-metric"><span>AUDIO</span><b>READY</b></div>
+    <div class="hud-metric"><span>NETZ</span><b>ACTIVE</b></div>
+  </section>
+</main>
+
+<div class="hud-telemetry">
+  <span>AUDIO</span><i></i><span>NETZ</span><i></i><span>SYS</span><i></i><span>PWR</span><i></i><span>CPU</span>
+</div>
+
+<div class="iron-modal" id="gmailModal" hidden>
+  <div class="iron-modal-card">
+    <button class="iron-modal-close" id="gmailClose">×</button>
+    <h2>GMAIL VERBINDUNG</h2>
+    <p>Gmail darf nicht mit deinem Passwort direkt an IRON gegeben werden. Dafür wird Google OAuth benutzt.</p>
+    <p>Benötigt werden später eine Google OAuth Client-ID, Client-Secret und eine Redirect-URL für deine IRON-Webseite.</p>
+    <p>Bis OAuth eingerichtet ist, bleibt Gmail bewusst getrennt.</p>
+  </div>
+</div>
+
+<nav>
+<a href="index.html">⌂<small>HOME</small></a>
+<a class="active" href="hud.html">◎<small>HUD</small></a>
+<a href="plans.html">◫<small>PLANS</small></a>
+<a href="task.html">✓<small>TASKS</small></a>
+<a href="einkaufsliste.html">□<small>SHOP</small></a>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=200"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="app.js?v=200"></script>
+<script src="mobile-bridge.js?v=1"></script>
+</body>
+</html>

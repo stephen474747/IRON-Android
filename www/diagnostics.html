@@ -1,0 +1,16 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IRON v18.5 Diagnose</title><link rel="stylesheet" href="style.css?v=200"><style>body{padding:28px;max-width:1050px;margin:auto}.box{background:#07131c;border:1px solid #1b91b7;padding:18px;margin:14px 0;border-radius:8px}.ok{color:#62f5bd}.bad{color:#ff7482}.warn{color:#ffd26a}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#02080d;padding:14px}button{padding:11px 16px;margin:4px}input{display:block;width:min(460px,95%);padding:11px;margin:7px 0}</style></head><body>
+<h1>IRON // FULL DIAGNOSE v18.5</h1>
+<div class="box"><b>SDK / Verbindung</b><pre id="base"></pre></div>
+<div class="box"><b>Login</b><input id="email" type="email" placeholder="E-Mail"><input id="password" type="password" placeholder="Passwort"><button id="login">LOGIN</button><span id="loginmsg"></span></div>
+<div class="box"><button id="read">TABELLEN LESEN TESTEN</button><button id="write">TASK + PLAN SCHREIBTEST</button><button id="ai">CLOUD-AI TEST</button><pre id="result">Bereit.</pre></div>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script><script src="iron-appwrite.js?v=200"></script><script>
+const $=s=>document.querySelector(s); const C=window.IRONCloud;
+$("#base").textContent=JSON.stringify({sdk:!!window.Appwrite,bridge:!!C,hasTablesDB:typeof Appwrite?.TablesDB==="function",hasJWT:typeof C?.account?.createJWT==="function",functionDomain:C?.cfg?.functionDomain,hostname:location.hostname},null,2);
+async function user(){const u=await C.currentUser();if(!u)throw new Error("Nicht eingeloggt");return u}
+function out(x){$("#result").textContent=typeof x==='string'?x:JSON.stringify(x,null,2)}
+$("#login").onclick=async()=>{try{let u=await C.login($("#email").value.trim(),$("#password").value);$("#loginmsg").className='ok';$("#loginmsg").textContent=' ✓ '+u.email}catch(e){$("#loginmsg").className='bad';$("#loginmsg").textContent=' ✗ '+(e.message||e)}};
+$("#read").onclick=async()=>{try{await user();out(await C.diagnose())}catch(e){out({error:e.message,code:e.code})}};
+$("#write").onclick=async()=>{try{const u=await user();const perms=C.userRowPermissions(u.$id);const t=await C.create(C.cfg.tables.tasks,{text:"IRON DIAGNOSE TEST",datum:"Test",erledigt:false,erstellt:new Date().toISOString()},C.ID.unique(),perms);const p=await C.create(C.cfg.tables.plans,{name:"IRON DIAGNOSE TEST",inhalt:"Test",erstellt:new Date().toISOString()},C.ID.unique(),perms);await C.remove(C.cfg.tables.tasks,t.$id);await C.remove(C.cfg.tables.plans,p.$id);out({ok:true,tasks:"CREATE+DELETE OK",plans:"CREATE+DELETE OK"})}catch(e){out({ok:false,error:e.message,code:e.code,type:e.type})}};
+$("#ai").onclick=async()=>{try{await user();out({ok:true,reply:await C.askAI("Antworte nur mit: IRON CLOUD OK")})}catch(e){out({ok:false,error:e.message,code:e.code,type:e.type})}};
+</script><script src="mobile-bridge.js?v=1"></script>
+</body></html>
