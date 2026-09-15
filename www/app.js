@@ -1,4 +1,4 @@
-console.log("[IRON] APP.JS Android V2 geladen");
+console.log("[IRON] APP.JS Android V3 geladen");
 /* =========================================================
    IRON v19.8 – DATE DISPLAY FIX
    ========================================================= */
@@ -1007,3 +1007,41 @@ async function loadWeatherV2(city="Luxembourg"){
   }
 }
 window.loadWeatherV2=loadWeatherV2;
+
+
+/* IRON Android V3: dedicated public-data loaders.
+   Shopping/Appwrite AI is intentionally untouched. */
+const IRON_V3_CLOUD = 'https://starter-function-4j4o.fra.appwrite.run';
+
+async function ironV3Get(path){
+  const r = await fetch(IRON_V3_CLOUD + path, {
+    method:'GET',
+    headers:{'Accept':'application/json'},
+    cache:'no-store'
+  });
+  const raw = await r.text();
+  let data;
+  try { data = JSON.parse(raw); }
+  catch { throw new Error(`Cloud-Antwort ist kein JSON (HTTP ${r.status}).`); }
+  if(!r.ok || data?.ok === false) throw new Error(data?.error || `HTTP ${r.status}`);
+  return data;
+}
+
+async function ironV3News(){
+  const data=await ironV3Get('/api/news');
+  console.log('[IRON V3 NEWS]',data);
+  return data;
+}
+async function ironV3Stocks(symbols='AAPL,MSFT,NVDA,TSLA'){
+  const data=await ironV3Get('/api/stocks?symbols='+encodeURIComponent(symbols));
+  console.log('[IRON V3 STOCKS]',data);
+  return data;
+}
+async function ironV3Weather(city='Luxembourg'){
+  const data=await ironV3Get('/api/weather?city='+encodeURIComponent(city));
+  console.log('[IRON V3 WEATHER]',data);
+  return data;
+}
+window.ironV3News=ironV3News;
+window.ironV3Stocks=ironV3Stocks;
+window.ironV3Weather=ironV3Weather;

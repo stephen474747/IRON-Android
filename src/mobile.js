@@ -268,6 +268,35 @@ async function cloudSelfTest(){
   return result;
 }
 
+
+async function callContactByName(name){
+  if(!isNative) throw new Error('Kontaktanrufe sind nur in der Android-App verfügbar.');
+  const IronPhone = registerPlugin('IronPhone');
+  const found = await IronPhone.lookupContact({ name:String(name||'').trim() });
+  if(!found?.number) throw new Error('Keine Telefonnummer für diesen Kontakt gefunden.');
+  await speak(`Ich rufe ${found.name || name} an.`);
+  return IronPhone.call({ number:found.number });
+}
+
+function installContactVoiceCommands(){
+  const original = window.command;
+  if(typeof original !== 'function') return;
+  window.command = async function(text){
+    const raw=String(text||'').trim();
+    const m=raw.match(/^(?:iron[,\s]*)?(?:ruf|rufe)\s+(.+?)(?:\s+an)?$/i);
+    if(m){
+      try{
+        return await callContactByName(m[1].trim());
+      }catch(e){
+        window.show?.(e?.message || String(e));
+        await speak('Ich konnte den Kontakt nicht anrufen.');
+        return;
+      }
+    }
+    return original(text);
+  };
+}
+
 async function init(){
   if(!state.native){
     log('Browser mode');
@@ -278,6 +307,7 @@ async function init(){
   await chooseMaleGermanVoice();
   await requestNotifications().catch(()=>{});
   cloudSelfTest().catch(()=>{});
+  setTimeout(installContactVoiceCommands, 500);
 
   installHudControls();
   installTaskReminderUI();
@@ -292,6 +322,7 @@ window.IRONMobile = {
   pickHudImage,
   callNumber,
   cloudSelfTest,
+  callContactByName,
   init
 };
 

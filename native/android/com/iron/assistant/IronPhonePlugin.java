@@ -2,6 +2,8 @@ package com.iron.assistant;
 
 import android.Manifest;
 import android.content.Intent;
+import android.database.Cursor;
+import android.provider.ContactsContract;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 
@@ -13,7 +15,15 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-@CapacitorPlugin(name = "IronPhone")
+@CapacitorPlugin(
+    name = "IronPhone",
+    permissions = {
+        @com.getcapacitor.annotation.Permission(
+            alias = "contacts",
+            strings = { android.Manifest.permission.READ_CONTACTS }
+        )
+    }
+)
 public class IronPhonePlugin extends Plugin {
     private static final int CALL_PERMISSION_REQUEST = 9412;
 
@@ -60,4 +70,63 @@ public class IronPhonePlugin extends Plugin {
         getActivity().startActivity(intent);
         call.resolve();
     }
+
+    @PluginMethod
+    public void lookupContact(PluginCall call) {
+        String wanted = call.getString("name", "").trim();
+        if (wanted.isEmpty()) {
+            call.reject("Kontaktname fehlt.");
+            return;
+        }
+
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                getContext(), android.Manifest.permission.READ_CONTACTS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissionForAlias("contacts", call, "contactsPermsCallback");
+            return;
+        }
+
+        resolveContact(call, wanted);
+    }
+
+    @com.getcapacitor.annotation.PermissionCallback
+    private void contactsPermsCallback(PluginCall call) {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                getContext(), android.Manifest.permission.READ_CONTACTS)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            resolveContact(call, call.getString("name", ""));
+        } else {
+            call.reject("Kontakte-Berechtigung wurde nicht erteilt.");
+        }
+    }
+
+    private void resolveContact(PluginCall call, String wanted) {
+        Cursor cursor = null;
+        try {
+            cursor = getContext().getContentResolver().query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    new String[] {
+                            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                            ContactsContract.CommonDataKinds.Phone.NUMBER
+                    },
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " LIKE ?",
+                    new String[] { "%" + wanted + "%" },
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+            );
+
+            if (cursor != null && cursor.moveToFirst()) {
+                JSObject ret = new JSObject();
+                ret.put("name", cursor.getString(0));
+                ret.put("number", cursor.getString(1));
+                call.resolve(ret);
+            } else {
+                call.reject("Kontakt nicht gefunden: " + wanted);
+            }
+        } catch (Exception e) {
+            call.reject("Kontakt konnte nicht gelesen werden: " + e.getMessage(), e);
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+    }
+
 }

@@ -17,6 +17,10 @@ internet = '<uses-permission android:name="android.permission.INTERNET" />'
 if internet not in text:
     text = text.replace("<application", internet + "\n    <application", 1)
 
+contacts = '<uses-permission android:name="android.permission.READ_CONTACTS" />'
+if contacts not in text:
+    text = text.replace("<application", contacts + "\n    <application", 1)
+
 perm = '<uses-permission android:name="android.permission.CALL_PHONE" />'
 if perm not in text:
     text = text.replace("<application", perm + "\\n    <application", 1)

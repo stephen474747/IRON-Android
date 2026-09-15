@@ -14,7 +14,8 @@
     "@capacitor/core": "^8.0.0",
     "@capacitor/local-notifications": "^8.0.0",
     "@capacitor-community/text-to-speech": "8.0.2",
-    "@capgo/capacitor-speech-recognition": "^8.0.0"
+    "@capgo/capacitor-speech-recognition": "^8.0.0",
+    "@capacitor-community/contacts": "^8.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",
