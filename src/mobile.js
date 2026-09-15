@@ -97,24 +97,26 @@ async function scheduleNotification({title='IRON TASK', body='Task-Erinnerung', 
 }
 
 async function listenOnce(){
-  const p = await SpeechRecognition.checkPermissions();
-  if(p?.speechRecognition !== 'granted'){
-    await SpeechRecognition.requestPermissions();
-  }
+  let p = await SpeechRecognition.checkPermissions();
+  if(p?.speechRecognition !== 'granted') p = await SpeechRecognition.requestPermissions();
+  if(p?.speechRecognition !== 'granted') throw new Error('Spracherkennung wurde nicht erlaubt.');
 
   const available = await SpeechRecognition.available();
-  if(!available?.available) throw new Error('Spracherkennung ist auf diesem Gerät nicht verfügbar.');
+  if(!available?.available) throw new Error('Android-Spracherkennung ist nicht verfügbar.');
 
-  const result = await SpeechRecognition.start({
-    language: 'de-DE',
-    maxResults: 3,
-    partialResults: false,
-    popup: false
-  });
-
-  const text = result?.matches?.[0] || '';
-  if(text) log('heard:', text);
-  return text;
+  try{
+    const result = await SpeechRecognition.start({
+      language:'de-DE',
+      maxResults:5,
+      partialResults:false,
+      popup:true
+    });
+    return String((result?.matches || []).find(Boolean) || '').trim();
+  }catch(e){
+    const msg=String(e?.message || e || '').toLowerCase();
+    if(msg.includes('no match') || msg.includes('nomatch')) return '';
+    throw e;
+  }
 }
 
 async function pickHudImage(){
@@ -201,6 +203,9 @@ function installHudControls(){
         if(status) status.textContent = text ? 'PROCESSING' : 'STANDBY';
         if(text && typeof window.command === 'function'){
           await window.command(text);
+        }else if(!text){
+          window.show?.('Ich habe dich nicht verstanden. Versuche es erneut.');
+          await speak('Ich habe dich nicht verstanden.');
         }
       }catch(e){
         console.warn('[IRON Mobile] speech:', e);
@@ -246,6 +251,23 @@ function installTaskReminderUI(){
   };
 }
 
+
+async function cloudSelfTest(){
+  const base='https://starter-function-4j4o.fra.appwrite.run';
+  const paths=['/api/status','/api/news','/api/stocks?symbols=AAPL','/api/weather?city=Luxembourg'];
+  const result={};
+  for(const path of paths){
+    try{
+      const r=await fetch(base+path,{cache:'no-store'});
+      result[path]={status:r.status,ok:r.ok};
+    }catch(e){
+      result[path]={ok:false,error:String(e?.message||e)};
+    }
+  }
+  console.log('[IRON Android V2 Cloud Test]',result);
+  return result;
+}
+
 async function init(){
   if(!state.native){
     log('Browser mode');
@@ -255,6 +277,7 @@ async function init(){
   log('Android native mode');
   await chooseMaleGermanVoice();
   await requestNotifications().catch(()=>{});
+  cloudSelfTest().catch(()=>{});
 
   installHudControls();
   installTaskReminderUI();
@@ -268,6 +291,7 @@ window.IRONMobile = {
   requestNotifications,
   pickHudImage,
   callNumber,
+  cloudSelfTest,
   init
 };
 

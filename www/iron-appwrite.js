@@ -165,7 +165,7 @@
         response = await callWithFreshJWT();
       } catch (e) {
         throw new Error(
-          "IRON AI-Function ist vom Browser nicht erreichbar. Appwrite-Datenbank ist weiterhin verbunden."
+          "IRON AI-Function ist aus der Android-App momentan nicht erreichbar. Appwrite-Datenbank ist weiterhin verbunden."
         );
       }
 

@@ -1,4 +1,4 @@
-console.log("[IRON] APP.JS v20 geladen");
+console.log("[IRON] APP.JS Android V2 geladen");
 /* =========================================================
    IRON v19.8 – DATE DISPLAY FIX
    ========================================================= */
@@ -992,3 +992,18 @@ window.addEventListener("error",(event)=>{
 });
 
 window.command = command;
+
+async function loadWeatherV2(city="Luxembourg"){
+  try{
+    const data=await fetchIronJSON(`/api/weather?city=${encodeURIComponent(city)}`);
+    const c=data.current||{};
+    const text=`${data.location||city}: ${c.temperature_2m ?? "?"}°C, gefühlt ${c.apparent_temperature ?? "?"}°C, Luftfeuchtigkeit ${c.relative_humidity_2m ?? "?"}%`;
+    if(typeof show==="function") show(text);
+    if(typeof speak==="function") speak(text);
+    return data;
+  }catch(e){
+    if(typeof show==="function") show("Wetter konnte nicht geladen werden: "+(e?.message||e));
+    throw e;
+  }
+}
+window.loadWeatherV2=loadWeatherV2;

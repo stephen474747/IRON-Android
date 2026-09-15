@@ -13,6 +13,10 @@ for name in ["MainActivity.java", "IronPhonePlugin.java"]:
 
 manifest = android / "app" / "src" / "main" / "AndroidManifest.xml"
 text = manifest.read_text(encoding="utf-8")
+internet = '<uses-permission android:name="android.permission.INTERNET" />'
+if internet not in text:
+    text = text.replace("<application", internet + "\n    <application", 1)
+
 perm = '<uses-permission android:name="android.permission.CALL_PHONE" />'
 if perm not in text:
     text = text.replace("<application", perm + "\\n    <application", 1)
