@@ -1,0 +1,53 @@
+name: Build IRON Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout IRON
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build IRON mobile bridge
+        run: npm run build:mobile
+
+      - name: Create Android project
+        run: npx cap add android
+
+      - name: Sync IRON with Android
+        run: npx cap sync android
+
+      - name: Add IRON Android functions
+        run: python3 scripts/patch_android.py
+
+      - name: Build IRON APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Upload IRON APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: IRON-Android-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
