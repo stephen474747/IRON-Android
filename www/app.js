@@ -627,7 +627,7 @@ async function loadStocks(){
   try{
     const data=await fetchIronJSON("/api/stocks?symbols=AAPL,MSFT,NVDA,TSLA");
     if(box){
-      box.innerHTML=(data.items||[]).map(s=>
+      box.innerHTML=(data.stocks||[]).map(s=>
         `<div class="hud-live-item"><b>${escapeHtml(s.symbol)}</b>
           <span>${s.price==null?"–":escapeHtml(String(s.price))} ${escapeHtml(s.currency||"")}</span>
           <small>${escapeHtml(s.note||"letzter verfügbarer Kurs")}</small>
@@ -745,6 +745,10 @@ async function command(t){
     if(/\b(aktien|aktienkurse|börse|boerse|kurse)\b/i.test(t) && !/(plan|einkauf)/i.test(t)){
       await loadStocks(); return;
     }
+    if(/\b(wetter|temperatur)\b/i.test(t) && !/(plan|einkauf)/i.test(t)){
+      const cityMatch=t.match(/(?:in|für|fuer)\s+([A-Za-zÀ-ÿ .'-]{2,60})/i);
+      await loadWeatherV2(cityMatch?.[1]?.trim() || "Luxembourg"); return;
+    }
     if(/(öffne|oeffne|zeige).{0,20}(einkaufsliste|einkaufs\s*liste)/i.test(t)){
       location.href="einkaufsliste.html"; return;
     }
@@ -831,7 +835,7 @@ $$('nav button').forEach(btn=>{
   if(label==='PLANS') btn.onclick=()=>location.href='plans.html';
   if(label==='TASKS') btn.onclick=()=>location.href='task.html';
   if(label==='SHOP') btn.onclick=()=>location.href='einkaufsliste.html';
-  if(label==='SETUP') btn.onclick=()=>show(`CLOUD ${cloud.cfg.projectId} // USER ${currentUser?.email||""}`);
+  if(label==='SETUP') btn.onclick=()=>location.href='diagnostics.html';
 });
 
 const newsBtn=$("#newsBtn");
