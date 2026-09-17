@@ -1,4 +1,4 @@
-name: Build IRON Android APK
+name: Build IRON Android V5 APK
 
 on:
   workflow_dispatch:
@@ -11,43 +11,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout IRON
+      - name: Repository laden
         uses: actions/checkout@v5
 
-      - name: Setup Node.js
+      - name: Node.js installieren
         uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: "22"
+          cache: "npm"
 
-      - name: Setup Java
+      - name: Java installieren
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
 
-      - name: Install dependencies
+      - name: Node-Abhängigkeiten installieren
         run: npm install
 
-      - name: Build IRON mobile bridge
+      - name: IRON Mobile Bridge bauen
         run: npm run build:mobile
 
-      - name: Create Android project
-        run: npx cap add android
+      - name: Android-Projekt erstellen
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
-      - name: Sync IRON with Android
+      - name: Capacitor synchronisieren
         run: npx cap sync android
 
-      - name: Add IRON Android functions
+      - name: IRON Native Android Code anwenden
         run: python3 scripts/patch_android.py
 
-      - name: Build IRON APK
-        run: |
-          chmod +x android/gradlew
-          cd android
-          ./gradlew assembleDebug
+      - name: Gradle ausführbar machen
+        run: chmod +x android/gradlew
 
-      - name: Upload IRON APK
+      - name: Debug APK bauen
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: IRON V5 APK hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: IRON-Android-APK
+          name: IRON-Android-V5
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
