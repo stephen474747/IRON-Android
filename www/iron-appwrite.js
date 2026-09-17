@@ -155,7 +155,9 @@
           },
           body: JSON.stringify({
             message,
-            userJwt: token.jwt
+            userJwt: token.jwt,
+            source: (window.IRONMobile?.isNative ? "android" : "web"),
+            conversation_id: (window.IRONMobile?.isNative ? "mobile-main" : "web-main")
           })
         });
       }

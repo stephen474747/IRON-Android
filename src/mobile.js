@@ -1,3 +1,4 @@
+console.log("[IRON] Android V5 Memory Client geladen");
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
