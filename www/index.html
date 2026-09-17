@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<title>IRON // Personal Assistant</title>
+<link rel="stylesheet" href="style.css?v=200">
+</head>
+<body>
+<div class="grid"></div><div class="scanlines"></div>
+<header class="topbar">
+  <div class="brand"><span class="mark">I</span><div><b>IRON</b><small>PERSONAL SYSTEM</small></div></div>
+  <div class="status"><i></i> CLOUD <b id="cloudStatus">CONNECTING</b></div>
+</header>
+<main>
+<section class="hero">
+  <div class="eyebrow">IRON CORE // READY</div>
+  <h1>GOOD DAY,<br><span>SIR.</span></h1>
+  <p>Your personal command center.</p>
+  <button class="voice" id="voiceBtn"><em></em><strong>⌁</strong><small>TALK TO IRON</small></button>
+  <div class="command"><span>&gt;</span><input id="commandInput" placeholder="Befehl eingeben..." autocomplete="off"><button id="sendBtn">SEND</button></div>
+  <div id="response">System bereit.</div>
+  <section class="answer-panel">
+    <div class="answer-head"><span>IRON RESPONSE // TEXT FALLBACK</span><b id="speechStatus">READY</b></div>
+    <div id="answerText">Antworten von IRON erscheinen hier immer als Text – auch wenn die Sprachausgabe nicht funktioniert.</div>
+  </section>
+</section>
+
+<section>
+  <div class="title">COMMAND CENTER <i></i></div>
+  <div class="cards">
+    <button data-command="Erstelle einen Tagesplan"><b>◫</b><strong>PLÄNE</strong><small>Tages- & Wochenplanung</small></button>
+    <button data-command="Öffne meinen Sportplan"><b>◈</b><strong>SPORT</strong><small>Training & Aktivitäten</small></button>
+    <button data-command="Öffne meine Finanzen"><b>◇</b><strong>FINANZEN</strong><small>Übersicht & Planung</small></button>
+    <button onclick="location.href='einkaufsliste.html'"><b>□</b><strong>EINKAUF</strong><small>Listen & Aufgaben</small></button>
+    <button onclick="location.href='hud.html'"><b>◎</b><strong>HUD</strong><small>Full IRON interface</small></button>
+  </div>
+</section>
+
+<section>
+  <div class="title">QUICK ACTIONS <i></i></div>
+  <div class="quick">
+    <button data-command="Erstelle einen neuen Plan">+ PLAN</button>
+    <button id="uploadBtn">↑ BILD</button>
+    <button data-command="Zeige meinen Status">SYSTEM</button>
+  </div>
+  <input id="imageInput" type="file" accept="image/*" hidden>
+</section>
+
+<section class="system">
+  <header>SYSTEM STATUS <span>v1.0 // WEB</span></header>
+  <div><p>CLOUD<b id="cloudStatus">CONNECTING</b></p><p>VOICE<b id="voiceStatus">STANDBY</b></p><p>PC AGENT<b id="pcStatus" class="offline">OFFLINE</b></p></div>
+</section>
+</main>
+
+<section class="iron-window" id="plansWindow"><div class="window-inner"><div class="window-top"><h2>PLANS // IRON</h2><button id="closePlans">×</button></div><div id="plansList"></div></div></section>
+<section class="iron-window" id="tasksWindow"><div class="window-inner"><div class="window-top"><h2>TASKS // IRON</h2><button id="closeTasks">×</button></div><div id="tasksList"></div></div></section>
+
+<nav>
+<a class="active" href="index.html">⌂<small>HOME</small></a>
+<a href="hud.html">◎<small>HUD</small></a>
+<a href="plans.html">◫<small>PLANS</small></a>
+<a href="task.html">✓<small>TASKS</small></a>
+<a href="einkaufsliste.html">□<small>SHOP</small></a>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=500"></script>
+<script src="app.js?v=500"></script>
+<script src="mobile-bridge.js?v=5"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<title>IRON // Tasks</title>
+<link rel="stylesheet" href="style.css?v=200">
+</head>
+<body>
+<div class="grid"></div><div class="scanlines"></div>
+<header class="topbar"><a class="brand" href="index.html"><span class="mark">I</span><div><b>IRON</b><small>PERSONAL SYSTEM</small></div></a><div class="status"><i></i> ONLINE</div></header>
+<main class="page-main">
+<section class="page-heading"><div class="eyebrow">IRON CORE // TASKS</div><h1>YOUR<br><span>TASKS.</span></h1><p>Alle von IRON erkannten Aufgaben.</p></section>
+<section class="panel-section"><div class="title">TASKS <i></i></div><div id="tasksList" class="screen-list"><p class="muted">Lade Aufgaben...</p></div></section>
+</main>
+<nav><a href="index.html">⌂<small>HOME</small></a><a href="hud.html">◎<small>HUD</small></a><a href="plans.html">◫<small>PLANS</small></a><a class="active" href="task.html">✓<small>TASKS</small></a><a href="einkaufsliste.html">□<small>SHOP</small></a></nav>
+
+<script>document.addEventListener('DOMContentLoaded', () => { if (typeof renderTasksScreen === 'function') renderTasksScreen(); });</script>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=500"></script>
+<script src="app.js?v=500"></script>
+<script src="mobile-bridge.js?v=5"></script>
+</body>
+</html>
