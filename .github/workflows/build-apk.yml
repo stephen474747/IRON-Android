@@ -2,9 +2,6 @@ name: Build IRON Android V5 APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build:
@@ -14,25 +11,24 @@ jobs:
       - name: Repository laden
         uses: actions/checkout@v5
 
-      - name: Node.js installieren
+      - name: Node.js 22 installieren
         uses: actions/setup-node@v5
         with:
           node-version: "22"
-          cache: "npm"
 
-      - name: Java installieren
+      - name: Java 21 installieren
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "21"
 
-      - name: Node-Abhängigkeiten installieren
+      - name: Dependencies installieren
         run: npm install
 
-      - name: IRON Mobile Bridge bauen
+      - name: IRON Mobile Code bauen
         run: npm run build:mobile
 
-      - name: Android-Projekt erstellen
+      - name: Android Projekt erstellen
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
@@ -41,17 +37,17 @@ jobs:
       - name: Capacitor synchronisieren
         run: npx cap sync android
 
-      - name: IRON Native Android Code anwenden
+      - name: IRON Android Patch anwenden
         run: python3 scripts/patch_android.py
 
-      - name: Gradle ausführbar machen
+      - name: Gradle Berechtigung setzen
         run: chmod +x android/gradlew
 
-      - name: Debug APK bauen
+      - name: IRON APK bauen
         working-directory: android
         run: ./gradlew assembleDebug
 
-      - name: IRON V5 APK hochladen
+      - name: APK bereitstellen
         uses: actions/upload-artifact@v4
         with:
           name: IRON-Android-V5
