@@ -1,4 +1,4 @@
-console.log("[IRON] Android V5 Memory Client geladen");
+console.log("[IRON] Android V5.1 Cloud Voice + Conversation geladen");
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -41,24 +41,60 @@ async function chooseMaleGermanVoice(){
   }
 }
 
-async function speak(text){
-  const value = String(text || '').trim();
-  if(!value) return;
+const CLOUD_BASE = 'https://starter-function-4j4o.fra.appwrite.run';
+let activeAudio = null;
+let conversationMode = false;
+let conversationBusy = false;
 
+async function systemSpeak(value){
+  await TextToSpeech.stop().catch(()=>{});
+  await TextToSpeech.speak({
+    text: value, lang:'de-DE', rate:0.92, pitch:0.78, volume:1.0,
+    ...(Number.isInteger(state.voiceIndex) ? { voice: state.voiceIndex } : {})
+  });
+}
+
+async function cloudSpeak(value){
+  const r = await fetch(`${CLOUD_BASE}/api/tts`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:value})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok || !data?.ok || !data?.audio_base64) throw new Error(data?.error || `TTS HTTP ${r.status}`);
+  if(activeAudio){ try{activeAudio.pause();}catch{} activeAudio=null; }
+  const audio = new Audio(`data:${data.mime_type || 'audio/mpeg'};base64,${data.audio_base64}`);
+  activeAudio=audio;
+  await audio.play();
+  await new Promise((resolve,reject)=>{ audio.onended=resolve; audio.onerror=()=>reject(new Error('Audio konnte nicht abgespielt werden.')); });
+  activeAudio=null;
+}
+
+async function speak(text){
+  const value=String(text||'').trim(); if(!value) return;
+  try{ await cloudSpeak(value); }
+  catch(e){ console.warn('[IRON Mobile] Cloud TTS fallback:',e); try{await systemSpeak(value);}catch(err){console.warn('[IRON Mobile] TTS:',err);} }
+}
+
+async function stopSpeaking(){
+  if(activeAudio){ try{activeAudio.pause(); activeAudio.currentTime=0;}catch{} activeAudio=null; }
+  await TextToSpeech.stop().catch(()=>{});
+}
+
+async function runConversationTurn(){
+  if(!conversationMode || conversationBusy) return;
+  conversationBusy=true;
   try{
-    await TextToSpeech.stop().catch(()=>{});
-    await TextToSpeech.speak({
-      text: value,
-      lang: 'de-DE',
-      rate: 0.92,
-      pitch: 0.78,
-      volume: 1.0,
-      ...(Number.isInteger(state.voiceIndex) ? { voice: state.voiceIndex } : {})
-    });
-  }catch(e){
-    console.warn('[IRON Mobile] TTS:', e);
+    const text=await listenOnce();
+    if(text && typeof window.command==='function') await window.command(text);
+  }catch(e){ console.warn('[IRON Mobile] conversation:',e); }
+  finally{
+    conversationBusy=false;
+    if(conversationMode) setTimeout(runConversationTurn,700);
   }
 }
+
+function startConversation(){ conversationMode=true; runConversationTurn(); return true; }
+async function stopConversation(){ conversationMode=false; await stopSpeaking(); return true; }
 
 async function requestNotifications(){
   try{
@@ -324,6 +360,9 @@ window.IRONMobile = {
   callNumber,
   cloudSelfTest,
   callContactByName,
+  startConversation,
+  stopConversation,
+  stopSpeaking,
   init
 };
 
