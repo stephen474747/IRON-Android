@@ -1,7 +1,10 @@
-name: Build IRON Android V5 APK
+name: Build IRON Android V5.1 APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -37,19 +40,19 @@ jobs:
       - name: Capacitor synchronisieren
         run: npx cap sync android
 
-      - name: IRON Android Patch anwenden
+      - name: Native IRON Funktionen anwenden
         run: python3 scripts/patch_android.py
 
-      - name: Gradle Berechtigung setzen
+      - name: Gradle ausführbar machen
         run: chmod +x android/gradlew
 
-      - name: IRON APK bauen
+      - name: APK bauen
         working-directory: android
         run: ./gradlew assembleDebug
 
-      - name: APK bereitstellen
+      - name: IRON V5.1 APK speichern
         uses: actions/upload-artifact@v4
         with:
-          name: IRON-Android-V5
+          name: IRON-Android-V5.1
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
