@@ -191,8 +191,12 @@ function installHudControls(){
     btn.textContent = 'KAMERA / GALERIE';
     btn.onclick = async ()=>{
       try{
-        await pickHudImage();
-        window.show?.('Bild wird im IRON HUD angezeigt.');
+        const src = await pickHudImage();
+        if(window.IRONImages?.importUrl){
+          await window.IRONImages.importUrl(src);
+        }else{
+          window.show?.('Bild wird im IRON HUD angezeigt.');
+        }
       }catch(e){
         window.show?.('Bild-Fehler: ' + (e?.message || e));
       }

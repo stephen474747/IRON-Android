@@ -145,3 +145,7 @@ nav a small{display:block;font-size:7px;letter-spacing:1.5px;margin-top:4px}
 }
 .iron-phone-box button,.iron-reminder-box button{padding:10px 12px}
 .iron-reminder-box h3{width:100%;margin:0 0 6px;font-size:.9rem;letter-spacing:.14em}
+
+/* V5.2 HUD image viewer */
+.hud-image-fullscreen img{touch-action:pinch-zoom;user-select:none;-webkit-user-select:none}
+.hud-image-stage img.active{display:block!important}

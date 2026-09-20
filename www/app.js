@@ -641,6 +641,50 @@ async function loadStocks(){
   }
 }
 
+// ---------- IRON IMAGE LIBRARY (Android/Web, local on this device) ----------
+const IRON_IMAGE_DB="iron_images_v1";
+function imageDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(IRON_IMAGE_DB,1);
+    req.onupgradeneeded=()=>{ if(!req.result.objectStoreNames.contains("images")) req.result.createObjectStore("images",{keyPath:"name"}); };
+    req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
+  });
+}
+async function imagePut(name,dataUrl){
+  const db=await imageDB();
+  return new Promise((resolve,reject)=>{const tx=db.transaction("images","readwrite");tx.objectStore("images").put({name:name.trim(),dataUrl,updated_at:new Date().toISOString()});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});
+}
+async function imageGet(query){
+  const db=await imageDB();
+  const all=await new Promise((resolve,reject)=>{const r=db.transaction("images").objectStore("images").getAll();r.onsuccess=()=>resolve(r.result||[]);r.onerror=()=>reject(r.error);});
+  const q=String(query||"").toLowerCase().trim();
+  return all.find(x=>x.name.toLowerCase()===q) || all.find(x=>x.name.toLowerCase().includes(q) || q.includes(x.name.toLowerCase()));
+}
+function displayHudImage(src,name="Bild"){
+  const img=$("#hudImage"), empty=$("#hudImageEmpty");
+  if(!img) return false;
+  img.src=src; img.classList.add("active"); img.dataset.imageName=name;
+  if(empty) empty.hidden=true;
+  show(`${name} wird im HUD angezeigt.`);
+  return true;
+}
+async function blobUrlToDataUrl(url){
+  const blob=await (await fetch(url)).blob();
+  return await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});
+}
+async function importHudImageUrl(url, suggestedName=""){
+  const name=(suggestedName || prompt("Wie soll IRON dieses Bild nennen?","") || "").trim();
+  if(!name) throw new Error("Kein Bildname angegeben.");
+  const dataUrl=String(url).startsWith("data:") ? String(url) : await blobUrlToDataUrl(url);
+  await imagePut(name,dataUrl); displayHudImage(dataUrl,name); return name;
+}
+async function showNamedHudImage(name){
+  const found=await imageGet(name);
+  if(!found) throw new Error(`Ich finde kein gespeichertes Bild namens „${name}“ auf diesem Handy.`);
+  displayHudImage(found.dataUrl,found.name); return found;
+}
+window.IRONImages={importUrl:importHudImageUrl,show:showNamedHudImage,display:displayHudImage};
+
 function initHudImage(){
   const uploadBtn=$("#uploadBtn"), imageInput=$("#imageInput"), img=$("#hudImage");
   const empty=$("#hudImageEmpty"), clear=$("#clearImageBtn");
@@ -654,13 +698,9 @@ function initHudImage(){
       return;
     }
     const reader=new FileReader();
-    reader.onload=()=>{
-      if(img){
-        img.src=String(reader.result);
-        img.classList.add("active");
-      }
-      if(empty) empty.hidden=true;
-      show(`Bild ${file.name} wird jetzt im IRON HUD angezeigt.`);
+    reader.onload=async()=>{
+      try{ await importHudImageUrl(String(reader.result), file.name.replace(/\.[^.]+$/, "")); }
+      catch(err){ show("Bild-Fehler: "+(err?.message||err)); }
     };
     reader.readAsDataURL(file);
     e.target.value="";
@@ -803,6 +843,13 @@ Nutze klare Abschnitte, sinnvolle Schritte und – falls passend – Tage oder T
         ? `Plan gespeichert: ${name}. Die AI-Function war nicht erreichbar, deshalb wurde ein lokaler IRON-Plan erstellt.`
         : `Plan gespeichert: ${name}`;
       show(a); speak(a); renderPlansScreen(); return;
+    }
+    const imageShowMatch=t.match(/(?:zeig|zeige|öffne|oeffne)\s+(?:mir\s+)?(?:das\s+|den\s+|die\s+)?(?:bild\s+)?(.+?)(?:\s+(?:bild|foto))?$/i);
+    if(imageShowMatch && /(?:bild|foto|logo|zeig|zeige)/i.test(t)){
+      let imageName=imageShowMatch[1].replace(/^(?:mir\s+)?/i,"").trim();
+      try{ await showNamedHudImage(imageName); speak(`${imageName} wird im HUD angezeigt.`); }
+      catch(e){ show(e.message); speak(e.message); }
+      return;
     }
     if(localPCCommand(t)){
       await checkPC();
