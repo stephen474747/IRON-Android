@@ -670,22 +670,55 @@ function gmailDisconnect(){
 
 // ---------- LIVE HUD DATA ----------
 async function fetchIronJSON(path){
-  const r=await fetch(cloud.cfg.functionDomain + path,{method:"GET",cache:"no-store"});
-  const j=await r.json().catch(()=>null);
-  if(!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+  const call=async p=>{
+    const r=await fetch(cloud.cfg.functionDomain+p,{method:"GET",cache:"no-store"});
+    const j=await r.json().catch(()=>null);
+    return {r,j,p};
+  };
+
+  let {r,j,p}=await call(path);
+
+  // Compatibility fallbacks. These avoid a raw 404 when an older function is still active.
+  if(r.status===404 && path==="/api/news/important"){
+    ({r,j,p}=await call("/api/news"));
+  }
+  if(r.status===404 && path==="/api/images/list"){
+    ({r,j,p}=await call("/api/images/status"));
+  }
+
+  if(!r.ok || !j?.ok){
+    if(r.status===404){
+      throw new Error(`IRON Cloud Route fehlt (${path}). Deploye die Appwrite Function V3.2.`);
+    }
+    throw new Error(j?.error || `IRON Cloud HTTP ${r.status}`);
+  }
   return j;
 }
 
-
 async function postIronJSON(path,body){
-  const r=await fetch(cloud.cfg.functionDomain + path,{
-    method:"POST",
-    headers:{"Content-Type":"text/plain;charset=UTF-8"},
-    body:JSON.stringify(body||{}),
-    cache:"no-store"
-  });
-  const j=await r.json().catch(()=>null);
-  if(!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+  const call=async p=>{
+    const r=await fetch(cloud.cfg.functionDomain+p,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=UTF-8"},
+      body:JSON.stringify(body||{}),
+      cache:"no-store"
+    });
+    const j=await r.json().catch(()=>null);
+    return {r,j,p};
+  };
+
+  let {r,j,p}=await call(path);
+
+  if(r.status===404 && path==="/api/research-plan"){
+    ({r,j,p}=await call("/api/recipes/research"));
+  }
+
+  if(!r.ok || !j?.ok){
+    if(r.status===404){
+      throw new Error(`IRON Cloud Route fehlt (${path}). Deploye die Appwrite Function V3.2.`);
+    }
+    throw new Error(j?.error || `IRON Cloud HTTP ${r.status}`);
+  }
   return j;
 }
 
@@ -1118,6 +1151,25 @@ async function uploadPhotoLibraryFile(){
   show("Bild wurde in Appwrite gespeichert.");
 }
 
+
+async function ironRouteSelfCheck(){
+  const required=[
+    "/api/status",
+    "/api/news/important",
+    "/api/images/list"
+  ];
+  const out=[];
+  for(const path of required){
+    try{
+      const r=await fetch(cloud.cfg.functionDomain+path,{method:"GET",cache:"no-store"});
+      const j=await r.json().catch(()=>null);
+      out.push({path,status:r.status,ok:r.ok&&!!j?.ok,version:j?.version||null,error:j?.error||null});
+    }catch(e){out.push({path,status:0,ok:false,error:e.message});}
+  }
+  return out;
+}
+window.ironRouteSelfCheck=ironRouteSelfCheck;
+
 // ---------- COMMAND ROUTER ----------
 function cleanTaskText(t){
   return t.replace(/^iron[, ]*/i,"")
@@ -1182,6 +1234,16 @@ async function command(t){
     if(mailSummaryRequested(t)){
       await summarizeImportantMails();
       return;
+    }
+    // Pure navigation/read requests must never call an API route.
+    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(einkaufsliste|einkaufs\s*liste|einkauf)\b/i.test(t)){
+      location.href="einkaufsliste.html"; return;
+    }
+    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(pläne|plaene|planseite|meine pläne|meine plaene)\b/i.test(t)){
+      location.href="plans.html"; return;
+    }
+    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(fotos|bilder|fotobibliothek|bildbibliothek)\b/i.test(t)){
+      location.href="photos.html"; return;
     }
     const requestedImage=extractImageRequest(t);
     if(requestedImage){
