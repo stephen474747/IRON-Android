@@ -641,50 +641,6 @@ async function loadStocks(){
   }
 }
 
-// ---------- IRON IMAGE LIBRARY (Android/Web, local on this device) ----------
-const IRON_IMAGE_DB="iron_images_v1";
-function imageDB(){
-  return new Promise((resolve,reject)=>{
-    const req=indexedDB.open(IRON_IMAGE_DB,1);
-    req.onupgradeneeded=()=>{ if(!req.result.objectStoreNames.contains("images")) req.result.createObjectStore("images",{keyPath:"name"}); };
-    req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
-  });
-}
-async function imagePut(name,dataUrl){
-  const db=await imageDB();
-  return new Promise((resolve,reject)=>{const tx=db.transaction("images","readwrite");tx.objectStore("images").put({name:name.trim(),dataUrl,updated_at:new Date().toISOString()});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});
-}
-async function imageGet(query){
-  const db=await imageDB();
-  const all=await new Promise((resolve,reject)=>{const r=db.transaction("images").objectStore("images").getAll();r.onsuccess=()=>resolve(r.result||[]);r.onerror=()=>reject(r.error);});
-  const q=String(query||"").toLowerCase().trim();
-  return all.find(x=>x.name.toLowerCase()===q) || all.find(x=>x.name.toLowerCase().includes(q) || q.includes(x.name.toLowerCase()));
-}
-function displayHudImage(src,name="Bild"){
-  const img=$("#hudImage"), empty=$("#hudImageEmpty");
-  if(!img) return false;
-  img.src=src; img.classList.add("active"); img.dataset.imageName=name;
-  if(empty) empty.hidden=true;
-  show(`${name} wird im HUD angezeigt.`);
-  return true;
-}
-async function blobUrlToDataUrl(url){
-  const blob=await (await fetch(url)).blob();
-  return await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});
-}
-async function importHudImageUrl(url, suggestedName=""){
-  const name=(suggestedName || prompt("Wie soll IRON dieses Bild nennen?","") || "").trim();
-  if(!name) throw new Error("Kein Bildname angegeben.");
-  const dataUrl=String(url).startsWith("data:") ? String(url) : await blobUrlToDataUrl(url);
-  await imagePut(name,dataUrl); displayHudImage(dataUrl,name); return name;
-}
-async function showNamedHudImage(name){
-  const found=await imageGet(name);
-  if(!found) throw new Error(`Ich finde kein gespeichertes Bild namens „${name}“ auf diesem Handy.`);
-  displayHudImage(found.dataUrl,found.name); return found;
-}
-window.IRONImages={importUrl:importHudImageUrl,show:showNamedHudImage,display:displayHudImage};
-
 function initHudImage(){
   const uploadBtn=$("#uploadBtn"), imageInput=$("#imageInput"), img=$("#hudImage");
   const empty=$("#hudImageEmpty"), clear=$("#clearImageBtn");
@@ -698,9 +654,13 @@ function initHudImage(){
       return;
     }
     const reader=new FileReader();
-    reader.onload=async()=>{
-      try{ await importHudImageUrl(String(reader.result), file.name.replace(/\.[^.]+$/, "")); }
-      catch(err){ show("Bild-Fehler: "+(err?.message||err)); }
+    reader.onload=()=>{
+      if(img){
+        img.src=String(reader.result);
+        img.classList.add("active");
+      }
+      if(empty) empty.hidden=true;
+      show(`Bild ${file.name} wird jetzt im IRON HUD angezeigt.`);
     };
     reader.readAsDataURL(file);
     e.target.value="";
@@ -716,10 +676,116 @@ function initHudImage(){
     if(!img.src) return;
     const overlay=document.createElement("div");
     overlay.className="hud-image-fullscreen";
-    overlay.innerHTML=`<img src="${img.src}" alt="IRON Vision"><button>×</button>`;
-    overlay.onclick=()=>overlay.remove();
+    overlay.innerHTML=`<div class="iron-image-viewer"><img src="${img.src}" alt="IRON Vision"><div class="iron-image-tools"><button data-zout>−</button><button data-zin>+</button><button data-close>×</button></div></div>`;
+    const full=overlay.querySelector("img");
+    let scale=1;
+    const apply=()=>{ full.style.transform=`scale(${scale})`; };
+    overlay.querySelector("[data-zin]").onclick=e=>{e.stopPropagation();scale=Math.min(4,scale+0.25);apply();};
+    overlay.querySelector("[data-zout]").onclick=e=>{e.stopPropagation();scale=Math.max(0.5,scale-0.25);apply();};
+    overlay.querySelector("[data-close]").onclick=e=>{e.stopPropagation();overlay.remove();};
     document.body.appendChild(overlay);
   };
+}
+
+
+// ---------- APPWRITE IMAGE LIBRARY ----------
+const IRON_IMAGE_API = "https://starter-function-4j4o.fra.appwrite.run";
+
+function extractImageRequest(text){
+  const t=String(text||"").replace(/^iron[, ]*/i,"").trim();
+  const m=t.match(/(?:zeig|zeige|öffne|oeffne|lade)\s+(?:mir\s+)?(?:das\s+|den\s+|die\s+)?(?:bild\s+(?:von\s+)?|foto\s+(?:von\s+)?|image\s+(?:von\s+)?)?(.+?)(?:\s+(?:im|in meinem)\s+hud)?[.!?]*$/i);
+  if(!m) return null;
+  let name=m[1].trim();
+  if(/^(einkaufsliste|einkaufs\s*liste|news|nachrichten|aktien|wetter)$/i.test(name)) return null;
+  return name;
+}
+
+function displayCloudImage(dataUrl, name="IRON Bild"){
+  const img=$("#hudImage"), empty=$("#hudImageEmpty");
+  if(!img) throw new Error("HUD-Bildbereich wurde nicht gefunden.");
+  img.src=dataUrl;
+  img.alt=name;
+  img.classList.add("active");
+  if(empty) empty.hidden=true;
+  img.scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+async function showAppwriteImage(name){
+  show(`IRON sucht „${name}“ in Appwrite...`);
+  const url=`${IRON_IMAGE_API}/api/images/search?name=${encodeURIComponent(name)}`;
+  const r=await fetch(url,{method:"GET",cache:"no-store"});
+  let d=null;
+  try{ d=await r.json(); }catch{}
+  if(!r.ok || !d?.ok || !d?.found || !d?.image?.data_url){
+    throw new Error(d?.error || `Bild „${name}“ wurde in Appwrite nicht gefunden.`);
+  }
+  displayCloudImage(d.image.data_url,d.image.name||name);
+  const msg=`Bild ${d.image.name||name} aus Appwrite wird im HUD angezeigt.`;
+  show(msg); speak(msg);
+  return d.image;
+}
+
+
+function smartPlanAndShoppingRequested(t){
+  const x=String(t||"").toLowerCase();
+  const hasPlan=/(plan|wochenplan|tagesplan|programm|ablauf)/i.test(x);
+  const hasShopping=/(einkauf|einkaufsliste|zutaten|materialliste|materialien|besorgung)/i.test(x);
+  // Also catch requests like "3 Gerichte pro Woche ... Einkaufsliste ... wie zubereiten"
+  const multi=/(\b\d+\b.*(?:gericht|mahlzeit|projekt|aktivität|aktivitaet)|(?:gericht|mahlzeit|projekt).*\b\d+\b)/i.test(x);
+  return (hasPlan && hasShopping) || (hasShopping && multi);
+}
+
+function parseIronJson(raw){
+  const txt=String(raw||"").trim()
+    .replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");
+  const a=txt.indexOf("{"), b=txt.lastIndexOf("}");
+  if(a<0 || b<a) throw new Error("IRON konnte den kombinierten Plan nicht strukturieren.");
+  return JSON.parse(txt.slice(a,b+1));
+}
+
+async function buildSmartPlanAndShopping(raw){
+  const prompt=`Du bist der Planungsmodus von IRON.
+Erstelle aus dem Nutzerwunsch ein zusammenhängendes Projekt mit einem Hauptplan UND passenden einzelnen Einkaufs-/Materiallisten.
+
+Nutzerwunsch:
+"${raw}"
+
+WICHTIG:
+- Das ist ALLGEMEIN: nicht nur Essen. Es kann um Gerichte, Lernen, Reisen, Projekte, Veranstaltungen, Haushalt oder andere Vorhaben gehen.
+- Falls Essen/Gerichte gemeint sind: wähle passende unterschiedliche Gerichte, nenne pro Gericht Zutaten und eine klare Zubereitung. Berücksichtige ausdrücklich genannte Eigenschaften wie "mehrere Proteinquellen", Allergien oder Vorlieben. Keine extremen Diäten oder restriktiven Regeln.
+- Falls eine Anzahl/Häufigkeit genannt wird (z.B. 3-mal pro Woche), halte sie ein.
+- Für jedes einzelne Teilprojekt/Gericht soll es eine eigene Einkaufs-/Materialliste geben.
+- Der Hauptplan soll erklären, wann/was gemacht wird und wie jedes Element durchgeführt wird.
+- Erfinde keine Preise.
+- Antworte NUR als gültiges JSON, ohne Markdown.
+
+Schema:
+{
+  "plan_name":"kurzer Name",
+  "plan":"vollständiger Plan als gut lesbarer Text",
+  "shopping_lists":[
+    {"name":"Name des Gerichts/Teilprojekts","content":"☐ Artikel 1\\n☐ Artikel 2"}
+  ]
+}`;
+  const answer=await cloud.askAI(prompt);
+  const data=parseIronJson(answer);
+  if(!data.plan || !Array.isArray(data.shopping_lists)) throw new Error("Unvollständige Plan-Antwort.");
+  return data;
+}
+
+async function saveSmartPlanAndShopping(raw){
+  show("IRON erstellt Plan und einzelne Einkaufslisten...");
+  const data=await buildSmartPlanAndShopping(raw);
+  const planName=String(data.plan_name||"IRON Plan").slice(0,180);
+  await createPlan(planName,String(data.plan));
+  for(const list of data.shopping_lists){
+    const n=String(list?.name||"Einkauf").slice(0,140);
+    const c=String(list?.content||"").trim();
+    if(c) await createShoppingList(`Einkauf – ${n}`,c);
+  }
+  const msg=`Plan ${planName} und ${data.shopping_lists.length} einzelne Einkaufslisten wurden gespeichert.`;
+  show(msg); speak(msg);
+  return data;
 }
 
 // ---------- COMMAND ROUTER ----------
@@ -779,6 +845,16 @@ async function command(t){
   if(input) input.value="";
   show("Befehl wird verarbeitet...");
   try{
+    const requestedImage=extractImageRequest(t);
+    if(requestedImage){
+      await showAppwriteImage(requestedImage);
+      return;
+    }
+    if(smartPlanAndShoppingRequested(t)){
+      await saveSmartPlanAndShopping(t);
+      renderPlansScreen();
+      return;
+    }
     if(/\b(nachrichten|news|schlagzeilen)\b/i.test(t) && !/(plan|einkauf)/i.test(t)){
       await loadNews(); return;
     }
@@ -843,13 +919,6 @@ Nutze klare Abschnitte, sinnvolle Schritte und – falls passend – Tage oder T
         ? `Plan gespeichert: ${name}. Die AI-Function war nicht erreichbar, deshalb wurde ein lokaler IRON-Plan erstellt.`
         : `Plan gespeichert: ${name}`;
       show(a); speak(a); renderPlansScreen(); return;
-    }
-    const imageShowMatch=t.match(/(?:zeig|zeige|öffne|oeffne)\s+(?:mir\s+)?(?:das\s+|den\s+|die\s+)?(?:bild\s+)?(.+?)(?:\s+(?:bild|foto))?$/i);
-    if(imageShowMatch && /(?:bild|foto|logo|zeig|zeige)/i.test(t)){
-      let imageName=imageShowMatch[1].replace(/^(?:mir\s+)?/i,"").trim();
-      try{ await showNamedHudImage(imageName); speak(`${imageName} wird im HUD angezeigt.`); }
-      catch(e){ show(e.message); speak(e.message); }
-      return;
     }
     if(localPCCommand(t)){
       await checkPC();

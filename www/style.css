@@ -146,6 +146,7 @@ nav a small{display:block;font-size:7px;letter-spacing:1.5px;margin-top:4px}
 .iron-phone-box button,.iron-reminder-box button{padding:10px 12px}
 .iron-reminder-box h3{width:100%;margin:0 0 6px;font-size:.9rem;letter-spacing:.14em}
 
-/* V5.2 HUD image viewer */
-.hud-image-fullscreen img{touch-action:pinch-zoom;user-select:none;-webkit-user-select:none}
-.hud-image-stage img.active{display:block!important}
+.iron-image-viewer{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:auto;touch-action:pan-x pan-y pinch-zoom}
+.iron-image-viewer img{max-width:90vw;max-height:82vh;transform-origin:center center;transition:transform .12s ease}
+.iron-image-tools{position:fixed;top:18px;right:18px;display:flex;gap:10px;z-index:10001}
+.iron-image-tools button{min-width:48px;min-height:48px;font-size:26px;border-radius:50%}
