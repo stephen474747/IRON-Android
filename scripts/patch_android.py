@@ -23,7 +23,11 @@ if contacts not in text:
 
 perm = '<uses-permission android:name="android.permission.CALL_PHONE" />'
 if perm not in text:
-    text = text.replace("<application", perm + "\\n    <application", 1)
+    text = text.replace("<application", perm + "\n    <application", 1)
+
+notifications = '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />'
+if notifications not in text:
+    text = text.replace("<application", notifications + "\n    <application", 1)
 
 calendar_read = '<uses-permission android:name="android.permission.READ_CALENDAR" />'
 if calendar_read not in text:

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02070b"><title>IRON // Foto Analyse</title>
+<link rel="stylesheet" href="style.css?v=710">
+</head>
+<body class="v7 v7-photo-viewer">
+<div class="grid"></div><div class="scanlines"></div>
+<header class="v7-header">
+  <div class="v7-header-spacer"></div>
+  <a class="v7-logo" href="index.html"><span>I</span><span>R</span><i>O</i><span>N</span><small>FOTO-ANALYSE</small></a>
+  <div class="v7-clockbox"><small id="hudDate">--.--.----</small><b id="hudTime">--:--</b></div>
+</header>
+
+<main class="v7-main">
+<section class="v7-photo-viewer-head v7-panel">
+  <div><h2>FOTO-ANALYSE</h2><p>BILD ANZEIGEN. DETAILS ERKENNEN. MEHR VERSTEHEN.</p></div>
+  <button onclick="location.href='photos.html'">‹ ZURÜCK</button>
+</section>
+
+<section class="v7-photo-canvas-panel v7-panel">
+  <div class="v7-panel-title"><span id="viewerPhotoName">APPWRITE FOTO</span><button onclick="location.href='photos.html'">×</button></div>
+  <div class="v7-photo-canvas-wrap">
+    <div class="v7-photo-crosshair"></div>
+    <img id="viewerPhoto" alt="IRON Foto">
+    <div class="v7-zoom-readout">ZOOM <b id="viewerZoomText">100%</b></div>
+  </div>
+</section>
+
+<section class="v7-photo-controls">
+  <button id="viewerZoomOut">⌕− <span>ZOOM −</span></button>
+  <button id="viewerZoomIn">⌕+ <span>ZOOM +</span></button>
+  <button id="viewerFit">⌗ <span>ANPASSEN</span></button>
+  <button id="viewerRotate">↻ <span>DREHEN</span></button>
+  <button id="viewerBright">☀ <span>HELLER</span></button>
+  <button id="viewerContrast">◐ <span>KONTRAST</span></button>
+</section>
+
+<section class="v7-photo-analysis-grid">
+  <article class="v7-panel">
+    <div class="v7-panel-title">BILDANALYSE <span>AI</span></div>
+    <button id="viewerAnalyzeBtn" class="v7-primary-action">ANALYSIEREN / BESCHREIBEN</button>
+    <div id="viewerAnalysisState" class="v7-analysis-state">
+      <p>○ OBJEKTE ERKENNEN</p><p>○ SZENEN ANALYSIEREN</p><p>○ DETAILS BESCHREIBEN</p>
+    </div>
+  </article>
+  <article class="v7-panel">
+    <div class="v7-panel-title">ANALYSE-ERGEBNIS <span>KI</span></div>
+    <textarea id="viewerDescription" placeholder="IRON Beschreibung"></textarea>
+    <input id="viewerNameInput" placeholder="Bildname">
+    <div class="v7-button-row">
+      <button id="viewerSaveMeta">NAME / BESCHREIBUNG SPEICHERN</button>
+      <button id="viewerSaveCopy">BEARBEITETE KOPIE SPEICHERN</button>
+    </div>
+  </article>
+</section>
+
+<section class="v7-assistant">
+  <div id="response" class="v7-assistant-response">Foto bereit.</div>
+  <div id="answerText" class="v7-answer-text">Frage IRON etwas zu diesem Bild.</div>
+  <div class="v7-commandbar">
+    <span class="v7-keyboard">⌨</span>
+    <input id="commandInput" placeholder="Stelle eine Frage zu diesem Bild ..." autocomplete="off">
+    <button id="voiceBtn" class="v7-mic">◉</button>
+    <button id="sendBtn" class="v7-send">➤</button>
+  </div>
+  <b id="speechStatus" class="v7-speech-status">READY</b>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=710"></script>
+<script src="app.js?v=710"></script>
+<script src="mobile-bridge.js?v=710"></script>
+<script src="iron-menu.js?v=710"></script>
+<script src="iron-v7-ui.js?v=710"></script>
+</body></html>

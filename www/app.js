@@ -1015,10 +1015,18 @@ async function createCalendarFromCommand(raw){
   }
   const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Luxembourg";
   const parsed=await postIronJSON("/api/calendar/parse",{text:raw,now:new Date().toISOString(),timezone});
+  parsed.event.important=/\b(wichtig|sehr wichtig|dringend|unbedingt)\b/i.test(String(raw||""));
+  if(parsed.event.important && !Number.isFinite(Number(parsed.event.reminder_minutes))){
+    parsed.event.reminder_minutes=15;
+  }
   await window.IRONMobile.createCalendarEvent(parsed.event);
   const when=new Date(parsed.event.start).toLocaleString("de-DE");
-  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.`;
+  const notifyText=parsed.event.important
+    ? " Ich erinnere Sie zusätzlich rechtzeitig mit einer wichtigen IRON-Benachrichtigung."
+    : " Ich erinnere Sie vorher mit einer IRON-Benachrichtigung.";
+  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.${notifyText}`;
   show(msg); await speak(msg);
+  window.dispatchEvent(new Event("iron-calendar-updated"));
   return parsed.event;
 }
 
@@ -1108,11 +1116,8 @@ function imageNameScore(name,q){
 }
 
 async function openPhotoLibraryItem(id){
-  show("IRON lädt das Foto aus Appwrite...");
-  const data=await ironImageGet(id,false);
-  if(!data?.image?.data_url) throw new Error("Bilddaten fehlen.");
-  currentCloudImage=data.image;
-  openImageStudio(data.image.data_url,data.image);
+  if(!id) return;
+  location.href=`photo-viewer.html?id=${encodeURIComponent(id)}`;
 }
 
 async function uploadPhotoLibraryFile(){
@@ -1221,6 +1226,9 @@ async function command(t){
     if(mailSummaryRequested(t)){
       await summarizeImportantMails();
       return;
+    }
+    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(kalender|termine|terminübersicht|terminuebersicht)\b/i.test(t)){
+      location.href="calendar.html"; return;
     }
     // Pure navigation/read requests must never call an API route.
     if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(einkaufsliste|einkaufs\s*liste|einkauf)\b/i.test(t)){
@@ -1574,3 +1582,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     const upload=$("#photoUploadBtn"); if(upload) upload.onclick=()=>uploadPhotoLibraryFile().catch(e=>show("Upload-Fehler: "+e.message));
   }
 });
+
+
+window.createTask = createTask;
+window.createCalendarFromCommand = createCalendarFromCommand;

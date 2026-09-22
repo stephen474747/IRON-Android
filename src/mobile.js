@@ -96,6 +96,24 @@ async function runConversationTurn(){
 function startConversation(){ conversationMode=true; runConversationTurn(); return true; }
 async function stopConversation(){ conversationMode=false; await stopSpeaking(); return true; }
 
+
+async function ensureIronNotificationChannel(){
+  if(!state.native) return;
+  try{
+    await LocalNotifications.createChannel({
+      id:'iron-important',
+      name:'IRON wichtige Hinweise',
+      description:'Wichtige Termine, Tasks und Erinnerungen von IRON',
+      importance:5,
+      visibility:1,
+      vibration:true,
+      lights:true
+    });
+  }catch(e){
+    console.warn('[IRON Mobile] notification channel:',e);
+  }
+}
+
 async function requestNotifications(){
   try{
     const current = await LocalNotifications.checkPermissions();
@@ -126,7 +144,8 @@ async function scheduleNotification({title='IRON TASK', body='Task-Erinnerung', 
       title,
       body,
       schedule: { at: when, allowWhileIdle: true },
-      extra: { source: 'IRON' }
+      channelId: 'iron-important',
+      extra: { source: 'IRON', body, title }
     }]
   });
 
@@ -336,18 +355,68 @@ function installContactVoiceCommands(){
 }
 
 
+async function listCalendarEvents({start,end} = {}){
+  if(!state.native) return {ok:false,events:[]};
+  const now=Date.now();
+  return IronCalendar.listEvents({
+    start: Number(start || (now - 86400000)),
+    end: Number(end || (now + 90*86400000))
+  });
+}
+
+async function scheduleCalendarNotifications(event){
+  const startMs=new Date(event?.start).getTime();
+  if(!Number.isFinite(startMs)) return [];
+
+  const important=!!event?.important;
+  const reminder=Number.isFinite(Number(event?.reminder_minutes))
+    ? Math.max(0,Number(event.reminder_minutes))
+    : 15;
+
+  const slots = important
+    ? [...new Set([60, reminder, 5])]
+    : [...new Set([reminder])];
+
+  const results=[];
+  for(const minutes of slots){
+    const at=new Date(startMs - minutes*60000);
+    if(at.getTime() <= Date.now()+5000) continue;
+    const prefix=important ? 'IRON // WICHTIGER TERMIN' : 'IRON // TERMIN';
+    const body=minutes===0
+      ? `Sir, ${event.title} beginnt jetzt.`
+      : `Sir, in ${minutes} Minuten: ${event.title}.`;
+    try{
+      results.push(await scheduleNotification({
+        title:prefix,
+        body,
+        at
+      }));
+    }catch(e){
+      console.warn('[IRON Mobile] calendar notification:',e);
+    }
+  }
+  return results;
+}
+
 async function createCalendarEvent(event){
   if(!state.native) throw new Error("Kalender ist nur in der Android-App verfügbar.");
-  return IronCalendar.createEvent({
+
+  // Native calendar entry is created without a second calendar-provider alert.
+  // IRON schedules its own notification(s) below.
+  const nativeResult=await IronCalendar.createEvent({
     title:String(event?.title||"Termin"),
     description:String(event?.description||""),
     location:String(event?.location||""),
     start:String(event?.start||""),
     end:String(event?.end||""),
     timezone:String(Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Luxembourg"),
-    reminderMinutes:Number.isFinite(Number(event?.reminder_minutes)) ? Number(event.reminder_minutes) : 15
+    reminderMinutes:-1
   });
+
+  const notifications=await scheduleCalendarNotifications(event);
+  return {...nativeResult,notifications};
 }
+
 
 async function init(){
   if(!state.native){
@@ -356,10 +425,19 @@ async function init(){
   }
 
   log('Android native mode');
+  await ensureIronNotificationChannel().catch(()=>{});
   await requestNotifications().catch(()=>{});
   cloudSelfTest().catch(()=>{});
   setTimeout(installContactVoiceCommands, 500);
   App.addListener('appStateChange',({isActive})=>{ if(isActive) window.dispatchEvent(new Event('iron-app-resume')); });
+  LocalNotifications.addListener('localNotificationActionPerformed', async (action)=>{
+    const n=action?.notification;
+    const body=n?.body || n?.extra?.body;
+    if(body){
+      setTimeout(()=>speak(body).catch(()=>{}),450);
+    }
+  });
+
 
   installHudControls();
   installTaskReminderUI();
@@ -376,6 +454,7 @@ window.IRONMobile = {
   cloudSelfTest,
   callContactByName,
   createCalendarEvent,
+  listCalendarEvents,
   startConversation,
   stopConversation,
   stopSpeaking,

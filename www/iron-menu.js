@@ -2,10 +2,11 @@
   const ITEMS=[
     ["index.html","⌂","HOME"],
     ["hud.html","◎","HUD"],
-    ["photos.html","▣","FOTOS"],
+    ["calendar.html","▦","KALENDER"],
+    ["task.html","✓","TASKS"],
     ["plans.html","◫","PLÄNE"],
     ["einkaufsliste.html","□","EINKAUF"],
-    ["task.html","✓","TASKS"],
+    ["photos.html","▣","FOTOS"],
     ["diagnostics.html","⚙","DIAGNOSE"]
   ];
 
