@@ -69,6 +69,18 @@ async function cloudSpeak(value){
   activeAudio=null;
 }
 
+
+function cleanSpeechText(value) {
+  return String(value ?? "")
+    .replace(/https?:\/\/\S+/gi, " Link ")
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, " ")
+    .replace(/[*_#>`~|•▪◦●○■□✓✔☐☑→←↑↓]+/g, " ")
+    .replace(/[,:;()[\]{}"“”„'’…\/\\]+/g, " ")
+    .replace(/\s*[-–—]\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function speak(text){
   const value=String(text||'').trim(); if(!value) return;
   try{ await cloudSpeak(value); }

@@ -109,6 +109,18 @@ if("speechSynthesis" in window){
   window.speechSynthesis.onvoiceschanged=selectIronVoice;
 }
 
+
+function cleanTextForSpeech(value){
+  return String(value ?? "")
+    .replace(/https?:\/\/\S+/gi," Link ")
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu," ")
+    .replace(/[*_#>`~|•▪◦●○■□✓✔☐☑→←↑↓]+/g," ")
+    .replace(/[,:;()[\]{}"“”„'’…\/\\]+/g," ")
+    .replace(/\s*[-–—]\s*/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
 function speak(text){
   if(window.IRONMobile?.isNative && typeof window.IRONMobile.speak === "function"){
     window.IRONMobile.speak(text);
@@ -692,12 +704,14 @@ function initHudImage(){
 const IRON_IMAGE_API = "https://starter-function-4j4o.fra.appwrite.run";
 
 function extractImageRequest(text){
-  const t=String(text||"").replace(/^iron[, ]*/i,"").trim();
-  const m=t.match(/(?:zeig|zeige|öffne|oeffne|lade)\s+(?:mir\s+)?(?:das\s+|den\s+|die\s+)?(?:bild\s+(?:von\s+)?|foto\s+(?:von\s+)?|image\s+(?:von\s+)?)?(.+?)(?:\s+(?:im|in meinem)\s+hud)?[.!?]*$/i);
-  if(!m) return null;
-  let name=m[1].trim();
-  if(/^(einkaufsliste|einkaufs\s*liste|news|nachrichten|aktien|wetter)$/i.test(name)) return null;
-  return name;
+  let t=String(text||"").replace(/^iron[\s,.:;-]*/i,"").trim();
+  if(!/\b(zeig|zeige|öffne|oeffne|lade)\b/i.test(t)) return null;
+  if(!/\b(bild|foto|image|logo)\b/i.test(t)) return null;
+  t=t.replace(/^.*?\b(?:zeig|zeige|öffne|oeffne|lade)\b/i,"");
+  t=t.replace(/^\s*(?:mir\s+)?(?:bitte\s+)?(?:das|den|die|ein|eine)?\s*/i,"");
+  t=t.replace(/^\s*(?:bild|foto|image|logo)\s*(?:von|vom|für|fuer)?\s*/i,"");
+  t=t.replace(/\s+(?:im|in meinem)\s+hud.*$/i,"").replace(/[.!?]+$/,"").trim();
+  return t || null;
 }
 
 function displayCloudImage(dataUrl, name="IRON Bild"){
@@ -777,13 +791,21 @@ async function saveSmartPlanAndShopping(raw){
   show("IRON erstellt Plan und einzelne Einkaufslisten...");
   const data=await buildSmartPlanAndShopping(raw);
   const planName=String(data.plan_name||"IRON Plan").slice(0,180);
-  await createPlan(planName,String(data.plan));
+  const savedPlan = await createPlan(planName,String(data.plan));
+  let savedLists = 0;
   for(const list of data.shopping_lists){
     const n=String(list?.name||"Einkauf").slice(0,140);
     const c=String(list?.content||"").trim();
-    if(c) await createShoppingList(`Einkauf – ${n}`,c);
+    if(c){
+      await createShoppingList(`Einkauf – ${n}`,c);
+      savedLists++;
+    }
   }
-  const msg=`Plan ${planName} und ${data.shopping_lists.length} einzelne Einkaufslisten wurden gespeichert.`;
+  // Die bestehenden createPlan/createShoppingList Funktionen schreiben in Appwrite.
+  // Danach die Cloud-Ansicht neu laden, damit die gespeicherten Rows sofort sichtbar sind.
+  try{ await loadPlans(); }catch{}
+  try{ await loadShoppingLists(); }catch{}
+  const msg=`Plan ${planName} und ${savedLists} einzelne Einkaufslisten wurden in Appwrite gespeichert.`;
   show(msg); speak(msg);
   return data;
 }
