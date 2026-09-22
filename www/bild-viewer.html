@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02070b"><title>IRON // Bild</title>
+<link rel="stylesheet" href="style.css?v=720">
+</head>
+<body class="v7 v7-simple-viewer">
+<div class="grid"></div><div class="scanlines"></div>
+
+<header class="v7-header">
+  <div class="v7-header-spacer"></div>
+  <a class="v7-logo" href="index.html"><span>I</span><span>R</span><i>O</i><span>N</span><small>BILD VIEWER</small></a>
+  <div class="v7-clockbox"><small id="hudDate">--.--.----</small><b id="hudTime">--:--</b></div>
+</header>
+
+<main class="v7-main">
+<section class="v7-panel v7-simple-viewer-top">
+  <button onclick="history.back()">‹ ZURÜCK</button>
+  <div><h2 id="simpleViewerName">IRON BILD</h2><p>Nur ansehen und zoomen.</p></div>
+  <button onclick="location.href='bilder.html'">×</button>
+</section>
+
+<section class="v7-panel v7-simple-viewer-panel">
+  <div class="v7-simple-viewer-stage">
+    <img id="simpleViewerImage" alt="IRON Bild">
+    <div class="v7-simple-zoom-label">ZOOM <b id="simpleViewerZoom">100%</b></div>
+  </div>
+</section>
+
+<section class="v7-simple-viewer-controls">
+  <button id="simpleZoomOut">−<span>ZOOM OUT</span></button>
+  <button id="simpleZoomIn">+<span>ZOOM IN</span></button>
+  <button id="simpleZoomFit">⌗<span>ANPASSEN</span></button>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=720"></script>
+<script src="app.js?v=720"></script>
+<script src="mobile-bridge.js?v=720"></script>
+<script src="iron-menu.js?v=720"></script>
+<script src="iron-v7-ui.js?v=720"></script>
+</body>
+</html>

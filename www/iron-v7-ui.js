@@ -238,5 +238,78 @@
     };
   }
 
-  document.addEventListener("DOMContentLoaded",()=>{initWeek();observeTasks();observePlans();observeShop();photoTools();weather();initCalendarForm();loadCalendarScreen();initTaskQuickAdd();initPhotoViewer()});
+
+  async function loadSimpleGallery(){
+    const grid=$("#simpleImageGrid");
+    if(!grid) return;
+    grid.innerHTML="<p>Lade Bilder aus Appwrite...</p>";
+    try{
+      const data=await fetchIronJSON("/api/images/list");
+      const images=Array.isArray(data?.images)?data.images:[];
+      if($("#simpleImageCount")) $("#simpleImageCount").textContent=images.length;
+
+      grid.innerHTML=images.length ? images.map(img=>`
+        <article class="v7-simple-image-card" data-name="${escapeHtml(img.name||"")}">
+          <button data-simple-image="${escapeHtml(img.id)}">
+            <div class="v7-simple-thumb" data-simple-thumb="${escapeHtml(img.id)}"><span>LOADING</span></div>
+            <h3>${escapeHtml(img.name||"IRON Bild")}</h3>
+          </button>
+        </article>
+      `).join("") : "<p>Keine Bilder in Appwrite gefunden.</p>";
+
+      const queue=[...images];
+      const workers=Array.from({length:Math.min(4,queue.length)},async()=>{
+        while(queue.length){
+          const img=queue.shift();
+          try{
+            const d=await ironImageGet(img.id,true);
+            const host=grid.querySelector(`[data-simple-thumb="${CSS.escape(img.id)}"]`);
+            if(host && d?.image?.data_url){
+              host.innerHTML=`<img src="${d.image.data_url}" alt="${escapeHtml(img.name||"IRON Bild")}">`;
+            }
+          }catch{}
+        }
+      });
+      await Promise.all(workers);
+
+      grid.querySelectorAll("[data-simple-image]").forEach(btn=>{
+        btn.onclick=()=>location.href=`bild-viewer.html?id=${encodeURIComponent(btn.dataset.simpleImage)}`;
+      });
+
+      const search=$("#simpleImageSearch");
+      const apply=()=>{
+        const q=(search?.value||"").trim().toLowerCase();
+        grid.querySelectorAll(".v7-simple-image-card").forEach(card=>{
+          card.style.display=!q || card.dataset.name.toLowerCase().includes(q) ? "" : "none";
+        });
+      };
+      search?.addEventListener("input",apply);
+    }catch(e){
+      grid.innerHTML=`<p>Bilder konnten nicht geladen werden: ${escapeHtml(e?.message||String(e))}</p>`;
+    }
+  }
+
+  async function initSimpleImageViewer(){
+    const img=$("#simpleViewerImage");
+    if(!img) return;
+    const id=new URLSearchParams(location.search).get("id");
+    if(!id){ window.show?.("Keine Bild-ID angegeben."); return; }
+    let scale=1;
+    const apply=()=>{
+      img.style.transform=`scale(${scale})`;
+      if($("#simpleViewerZoom")) $("#simpleViewerZoom").textContent=`${Math.round(scale*100)}%`;
+    };
+    try{
+      const data=await ironImageGet(id,false);
+      img.src=data?.image?.data_url||"";
+      if($("#simpleViewerName")) $("#simpleViewerName").textContent=data?.image?.name||"IRON Bild";
+    }catch(e){
+      window.show?.("Bild konnte nicht geladen werden: "+(e?.message||e));
+    }
+    $("#simpleZoomIn").onclick=()=>{scale=Math.min(5,scale+.25);apply()};
+    $("#simpleZoomOut").onclick=()=>{scale=Math.max(.4,scale-.25);apply()};
+    $("#simpleZoomFit").onclick=()=>{scale=1;apply()};
+  }
+
+  document.addEventListener("DOMContentLoaded",()=>{initWeek();observeTasks();observePlans();observeShop();photoTools();weather();initCalendarForm();loadCalendarScreen();initTaskQuickAdd();initPhotoViewer();loadSimpleGallery();initSimpleImageViewer()});
 })();

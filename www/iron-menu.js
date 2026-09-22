@@ -6,7 +6,8 @@
     ["task.html","✓","TASKS"],
     ["plans.html","◫","PLÄNE"],
     ["einkaufsliste.html","□","EINKAUF"],
-    ["photos.html","▣","FOTOS"],
+    ["bilder.html","▧","BILDER"],
+    ["photos.html","▣","FOTO-ANALYSE"],
     ["diagnostics.html","⚙","DIAGNOSE"]
   ];
 

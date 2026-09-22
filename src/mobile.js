@@ -365,7 +365,8 @@ async function listCalendarEvents({start,end} = {}){
 }
 
 async function scheduleCalendarNotifications(event){
-  const startMs=new Date(event?.start).getTime();
+  const startDate=new Date(event?.start);
+  const startMs=startDate.getTime();
   if(!Number.isFinite(startMs)) return [];
 
   const important=!!event?.important;
@@ -373,26 +374,56 @@ async function scheduleCalendarNotifications(event){
     ? Math.max(0,Number(event.reminder_minutes))
     : 15;
 
+  const results=[];
+  const title=String(event?.title||"Termin");
+  const timeLabel=startDate.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+
+  // Day-of notification: 08:00 on the appointment day.
+  const dayReminder=new Date(startDate);
+  dayReminder.setHours(8,0,0,0);
+  if(dayReminder.getTime() > Date.now()+5000){
+    try{
+      results.push(await scheduleNotification({
+        title:"IRON // TERMIN HEUTE",
+        body:`Sir, vergessen Sie Ihren Termin nicht. Heute um ${timeLabel}: ${title}.`,
+        at:dayReminder
+      }));
+    }catch(e){
+      console.warn("[IRON Mobile] day reminder:",e);
+    }
+  } else {
+    // If the appointment is today and 08:00 has already passed, send a near-immediate
+    // reminder once, as long as the appointment is still in the future.
+    const now=new Date();
+    if(startDate.toDateString()===now.toDateString() && startMs>Date.now()+60000){
+      try{
+        results.push(await scheduleNotification({
+          title:"IRON // TERMIN HEUTE",
+          body:`Sir, vergessen Sie Ihren Termin nicht. Heute um ${timeLabel}: ${title}.`,
+          at:new Date(Date.now()+8000)
+        }));
+      }catch(e){
+        console.warn("[IRON Mobile] immediate day reminder:",e);
+      }
+    }
+  }
+
+  // Standard/important pre-event reminders.
   const slots = important
     ? [...new Set([60, reminder, 5])]
     : [...new Set([reminder])];
 
-  const results=[];
   for(const minutes of slots){
     const at=new Date(startMs - minutes*60000);
     if(at.getTime() <= Date.now()+5000) continue;
-    const prefix=important ? 'IRON // WICHTIGER TERMIN' : 'IRON // TERMIN';
+    const prefix=important ? "IRON // WICHTIGER TERMIN" : "IRON // TERMIN";
     const body=minutes===0
-      ? `Sir, ${event.title} beginnt jetzt.`
-      : `Sir, in ${minutes} Minuten: ${event.title}.`;
+      ? `Sir, ${title} beginnt jetzt.`
+      : `Sir, vergessen Sie Ihren Termin nicht. In ${minutes} Minuten: ${title}.`;
     try{
-      results.push(await scheduleNotification({
-        title:prefix,
-        body,
-        at
-      }));
+      results.push(await scheduleNotification({title:prefix,body,at}));
     }catch(e){
-      console.warn('[IRON Mobile] calendar notification:',e);
+      console.warn("[IRON Mobile] calendar notification:",e);
     }
   }
   return results;

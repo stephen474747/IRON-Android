@@ -1230,6 +1230,9 @@ async function command(t){
     if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(kalender|termine|terminübersicht|terminuebersicht)\b/i.test(t)){
       location.href="calendar.html"; return;
     }
+    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(bilder|galerie|bildschirm|foto galerie|fotogalerie)\b/i.test(t)){
+      location.href="bilder.html"; return;
+    }
     // Pure navigation/read requests must never call an API route.
     if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(einkaufsliste|einkaufs\s*liste|einkauf)\b/i.test(t)){
       location.href="einkaufsliste.html"; return;
