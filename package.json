@@ -1,6 +1,6 @@
 {
   "name": "iron-android",
-  "version": "5.4.0",
+  "version": "6.0.0",
   "private": true,
   "scripts": {
     "build:mobile": "esbuild src/mobile.js --bundle --platform=browser --format=iife --global-name=IRONMobileBundle --outfile=www/mobile-bridge.js",
@@ -13,7 +13,6 @@
     "@capacitor/camera": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/local-notifications": "^8.0.0",
-    "@capacitor-community/text-to-speech": "8.0.2",
     "@capgo/capacitor-speech-recognition": "^8.0.0",
     "@capacitor-community/contacts": "^8.0.0"
   },

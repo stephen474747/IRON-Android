@@ -123,8 +123,9 @@ function cleanTextForSpeech(value){
 
 function speak(text){
   if(window.IRONMobile?.isNative && typeof window.IRONMobile.speak === "function"){
-    window.IRONMobile.speak(text);
-    return;
+    const p=Promise.resolve(window.IRONMobile.speak(cleanTextForSpeech(text)));
+    window.__ironLastSpeechPromise=p;
+    return p;
   }
   const msg=String(text||"").trim();
   if(!msg) return;
@@ -280,7 +281,8 @@ async function createPlan(name, inhalt){
   const payload={
     name:String(name||"Plan").trim(),
     inhalt:String(inhalt||"").trim(),
-    erstellt:new Date().toISOString()
+    erstellt:new Date().toISOString(),
+    typ:"plan"
   };
 
   if(!payload.inhalt) throw new Error("Plan-Inhalt ist leer.");
@@ -377,7 +379,19 @@ const SHOP_PREFIX = "EINKAUF // ";
 
 async function createShoppingList(name, inhalt){
   const cleanName=String(name||"Einkaufsliste").replace(/^EINKAUF\s*\/\/\s*/i,"").trim() || "Einkaufsliste";
-  const row=await createPlan(`EINKAUF // ${cleanName}`, String(inhalt||"").trim());
+  const payload={
+    name:`EINKAUF // ${cleanName}`,
+    inhalt:String(inhalt||"").trim(),
+    erstellt:new Date().toISOString(),
+    typ:"einkauf"
+  };
+  if(!payload.inhalt) throw new Error("Einkaufsliste ist leer.");
+  const row=await cloud.create(cloud.cfg.tables.plans,payload);
+  try{
+    const cached=JSON.parse(localStorage.getItem("iron_plans_cache")||"[]");
+    cached.unshift({...payload,$id:row?.$id||("local_"+Date.now())});
+    localStorage.setItem("iron_plans_cache",JSON.stringify(cached.slice(0,150)));
+  }catch{}
   try{ await renderShoppingScreen(); }catch(e){ console.warn("Shopping render:",e); }
   return row;
 }
@@ -508,6 +522,7 @@ const GOOGLE_CLIENT_ID = "881990901270-tbc86vea22nb1a3ev6t7ck9cdkbq5avl.apps.goo
 const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 let gmailTokenClient = null;
 let gmailAccessToken = null;
+let gmailLastMails = [];
 
 function gmailSetState(text){
   const el=$("#gmailState");
@@ -565,34 +580,81 @@ async function loadGmailInbox(){
   const box=$("#hudNews");
   if(box) box.innerHTML="<p>Lade Gmail…</p>";
   try{
-    const list=await gmailFetch("messages?maxResults=8&q=in:inbox");
-    const ids=(list.messages||[]).slice(0,8);
+    const list=await gmailFetch("messages?maxResults=20&q=in:inbox newer_than:14d");
+    const ids=(list.messages||[]).slice(0,20);
     const mails=[];
     for(const m of ids){
       const msg=await gmailFetch(`messages/${encodeURIComponent(m.id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`);
       mails.push({
         id:msg.id,
+        threadId:msg.threadId,
         from:gmailHeader(msg.payload?.headers,"From"),
         subject:gmailHeader(msg.payload?.headers,"Subject") || "(Kein Betreff)",
         date:gmailHeader(msg.payload?.headers,"Date"),
-        snippet:msg.snippet || ""
+        snippet:msg.snippet || "",
+        unread:(msg.labelIds||[]).includes("UNREAD"),
+        important:(msg.labelIds||[]).includes("IMPORTANT")
       });
     }
+    gmailLastMails=mails;
     if(box){
-      box.innerHTML=mails.map(m=>`
+      box.innerHTML=mails.slice(0,10).map(m=>`
         <div class="hud-live-item">
-          <b>${escapeHtml(m.subject)}</b>
+          <b>${m.unread?"● ":""}${escapeHtml(m.subject)}</b>
           <small>${escapeHtml(m.from)}</small>
           <small>${escapeHtml(m.snippet)}</small>
         </div>
       `).join("") || "<p>Keine Mails im Posteingang.</p>";
     }
-    show(`Gmail geladen: ${mails.length} Mails.`);
+    gmailSetState("GMAIL: VERBUNDEN (NUR LESEN)");
+    await notifyImportantLoadedMails(mails);
+    return mails;
   }catch(e){
     gmailSetState("GMAIL: FEHLER");
     if(box) box.innerHTML=`<p>Gmail Fehler: ${escapeHtml(e.message)}</p>`;
     show(`Gmail Fehler: ${e.message}`);
+    throw e;
   }
+}
+
+async function summarizeImportantMails(){
+  if(!gmailAccessToken){
+    show("Gmail ist noch nicht verbunden. Öffne zuerst Gmail im IRON HUD und melde dich an.");
+    throw new Error("Gmail ist nicht verbunden.");
+  }
+  const mails=gmailLastMails.length ? gmailLastMails : await loadGmailInbox();
+  const compact=mails.slice(0,20).map((m,i)=>({
+    nr:i+1,from:m.from,subject:m.subject,snippet:m.snippet,unread:m.unread,important:m.important,date:m.date
+  }));
+  const prompt=`Fasse die wichtigsten E-Mails dieses Posteingangs für Sir kurz zusammen.
+Priorisiere ungelesene, als IMPORTANT markierte, Termine, Rechnungen, Schule/Arbeit, Bestellungen,
+Chevalier & Roth und Dinge, die eine Antwort oder Handlung brauchen.
+Ignoriere Newsletter/Werbung wenn sie nicht wichtig sind.
+Maximal 6 Mails. Nenne Absender, Betreff und in 1-2 Sätzen was wichtig ist.
+E-Mails: ${JSON.stringify(compact)}`;
+  const summary=await cloud.askAI(prompt);
+  show(summary);
+  await speak(summary);
+  return summary;
+}
+
+async function notifyImportantLoadedMails(mails){
+  if(!window.IRONMobile?.isNative || typeof window.IRONMobile.scheduleNotification!=="function") return;
+  const candidates=(mails||[]).filter(m=>m.unread && m.important).slice(0,3);
+  let seen=[];
+  try{ seen=JSON.parse(localStorage.getItem("iron_notified_mail_ids")||"[]"); }catch{}
+  const seenSet=new Set(seen);
+  for(const m of candidates){
+    if(seenSet.has(m.id)) continue;
+    const short=`${m.from}: ${m.subject}. ${m.snippet}`.slice(0,350);
+    await window.IRONMobile.scheduleNotification({
+      title:"IRON // WICHTIGE MAIL",
+      body:`Sir, kontrollieren Sie Ihre Mails. ${short}`,
+      at:new Date(Date.now()+1500)
+    }).catch(()=>{});
+    seenSet.add(m.id);
+  }
+  localStorage.setItem("iron_notified_mail_ids",JSON.stringify([...seenSet].slice(-100)));
 }
 
 function gmailDisconnect(){
@@ -614,22 +676,42 @@ async function fetchIronJSON(path){
   return j;
 }
 
+
+async function postIronJSON(path,body){
+  const r=await fetch(cloud.cfg.functionDomain + path,{
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=UTF-8"},
+    body:JSON.stringify(body||{}),
+    cache:"no-store"
+  });
+  const j=await r.json().catch(()=>null);
+  if(!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+  return j;
+}
+
 async function loadNews(){
   const box=$("#hudNews");
-  if(box) box.innerHTML="<p>Lade aktuelle News…</p>";
+  if(box) box.innerHTML="<p>IRON recherchiert die wichtigsten Weltnachrichten…</p>";
   try{
-    const data=await fetchIronJSON("/api/news");
+    const data=await fetchIronJSON("/api/news/important");
     if(box){
-      box.innerHTML=(data.items||[]).slice(0,5).map(n=>
-        `<a class="hud-live-item" href="${escapeHtml(n.link)}" target="_blank" rel="noopener">
-          <b>${escapeHtml(n.title)}</b><small>${escapeHtml(n.source||"News")}</small>
+      box.innerHTML=(data.items||[]).slice(0,8).map(n=>
+        `<a class="hud-live-item" href="${escapeHtml(n.url||"#")}" ${n.url?'target="_blank" rel="noopener"':""}>
+          <b>${escapeHtml(n.title||"News")}</b>
+          <small>${escapeHtml(n.summary||"")}</small>
+          <small>${escapeHtml(n.why_important||"")}</small>
         </a>`
-      ).join("") || "<p>Keine News gefunden.</p>";
+      ).join("") || "<p>Keine wichtigen News gefunden.</p>";
     }
-    show(`News aktualisiert: ${(data.items||[]).length} Meldungen.`);
+    const spoken=(data.items||[]).slice(0,6).map((n,i)=>`${i+1}. ${n.title}. ${n.summary}`).join(" ");
+    const text=data.summary ? `${data.summary}\n\n${spoken}` : spoken;
+    show(text || "Keine wichtigen Weltnachrichten gefunden.");
+    if(text) speak(text);
+    return data;
   }catch(e){
     if(box) box.innerHTML=`<p>News nicht erreichbar: ${escapeHtml(e.message)}</p>`;
     show(`News-Fehler: ${e.message}`);
+    throw e;
   }
 }
 
@@ -686,22 +768,107 @@ function initHudImage(){
 
   if(img) img.onclick=()=>{
     if(!img.src) return;
-    const overlay=document.createElement("div");
-    overlay.className="hud-image-fullscreen";
-    overlay.innerHTML=`<div class="iron-image-viewer"><img src="${img.src}" alt="IRON Vision"><div class="iron-image-tools"><button data-zout>−</button><button data-zin>+</button><button data-close>×</button></div></div>`;
-    const full=overlay.querySelector("img");
-    let scale=1;
-    const apply=()=>{ full.style.transform=`scale(${scale})`; };
-    overlay.querySelector("[data-zin]").onclick=e=>{e.stopPropagation();scale=Math.min(4,scale+0.25);apply();};
-    overlay.querySelector("[data-zout]").onclick=e=>{e.stopPropagation();scale=Math.max(0.5,scale-0.25);apply();};
-    overlay.querySelector("[data-close]").onclick=e=>{e.stopPropagation();overlay.remove();};
-    document.body.appendChild(overlay);
+    openImageStudio(img.src,currentCloudImage);
   };
 }
 
 
+
+function renderEditedImageDataURL(src,{rotation=0,brightness=100,contrast=100}={}){
+  return new Promise((resolve,reject)=>{
+    const im=new Image();
+    im.onload=()=>{
+      const swap=Math.abs(rotation%180)===90;
+      const canvas=document.createElement("canvas");
+      canvas.width=swap?im.naturalHeight:im.naturalWidth;
+      canvas.height=swap?im.naturalWidth:im.naturalHeight;
+      const ctx=canvas.getContext("2d");
+      ctx.filter=`brightness(${brightness}%) contrast(${contrast}%)`;
+      ctx.translate(canvas.width/2,canvas.height/2);
+      ctx.rotate(rotation*Math.PI/180);
+      ctx.drawImage(im,-im.naturalWidth/2,-im.naturalHeight/2);
+      resolve(canvas.toDataURL("image/jpeg",0.92));
+    };
+    im.onerror=()=>reject(new Error("Bild konnte nicht bearbeitet werden."));
+    im.src=src;
+  });
+}
+
+function openImageStudio(src,meta=null){
+  const overlay=document.createElement("div");
+  overlay.className="hud-image-fullscreen iron-studio-overlay";
+  overlay.innerHTML=`
+    <div class="iron-image-viewer iron-studio">
+      <img src="${src}" alt="IRON Vision">
+      <div class="iron-image-tools">
+        <button data-zout>−</button><button data-zin>+</button>
+        <button data-rl>↶</button><button data-rr>↷</button>
+        <button data-bright>☀+</button><button data-dark>☀−</button>
+        <button data-contrast>◐+</button><button data-reset>RESET</button>
+        <button data-describe>BESCHREIBEN</button><button data-save>SPEICHERN</button>
+        <button data-close>×</button>
+      </div>
+      <div class="iron-image-description-box">
+        <input data-name value="${escapeHtml(meta?.name||"IRON Bild")}" placeholder="Bildname">
+        <textarea data-desc placeholder="Beschreibung">${escapeHtml(meta?.description||"")}</textarea>
+        <button data-save-desc>BESCHREIBUNG SPEICHERN</button>
+      </div>
+    </div>`;
+  const full=overlay.querySelector("img");
+  let scale=1,rotation=0,brightness=100,contrast=100;
+  const apply=()=>{
+    full.style.transform=`scale(${scale}) rotate(${rotation}deg)`;
+    full.style.filter=`brightness(${brightness}%) contrast(${contrast}%)`;
+  };
+  const stop=fn=>e=>{e.stopPropagation();fn(e);};
+  overlay.querySelector("[data-zin]").onclick=stop(()=>{scale=Math.min(5,scale+.25);apply();});
+  overlay.querySelector("[data-zout]").onclick=stop(()=>{scale=Math.max(.4,scale-.25);apply();});
+  overlay.querySelector("[data-rl]").onclick=stop(()=>{rotation-=90;apply();});
+  overlay.querySelector("[data-rr]").onclick=stop(()=>{rotation+=90;apply();});
+  overlay.querySelector("[data-bright]").onclick=stop(()=>{brightness=Math.min(180,brightness+10);apply();});
+  overlay.querySelector("[data-dark]").onclick=stop(()=>{brightness=Math.max(40,brightness-10);apply();});
+  overlay.querySelector("[data-contrast]").onclick=stop(()=>{contrast=Math.min(180,contrast+10);apply();});
+  overlay.querySelector("[data-reset]").onclick=stop(()=>{scale=1;rotation=0;brightness=100;contrast=100;apply();});
+  overlay.querySelector("[data-close]").onclick=stop(()=>overlay.remove());
+
+  overlay.querySelector("[data-describe]").onclick=stop(async()=>{
+    try{
+      const data=await postIronJSON("/api/vision",{data_url:src,prompt:"Beschreibe dieses Bild knapp und nützlich für meine IRON-Bildbibliothek."});
+      overlay.querySelector("[data-desc]").value=data.description||"";
+      show(data.description||"Keine Beschreibung erhalten.");
+      await speak(data.description||"");
+    }catch(e){show("Bildbeschreibung fehlgeschlagen: "+e.message);}
+  });
+
+  overlay.querySelector("[data-save-desc]").onclick=stop(async()=>{
+    if(!meta?.id){show("Dieses Bild ist noch nicht als Appwrite-Bild gespeichert.");return;}
+    try{
+      const name=overlay.querySelector("[data-name]").value.trim()||meta.name;
+      const description=overlay.querySelector("[data-desc]").value.trim();
+      await postIronJSON("/api/images/update",{id:meta.id,name,description});
+      meta.name=name; meta.description=description; currentCloudImage=meta;
+      show("Bildname und Beschreibung wurden in Appwrite gespeichert.");
+    }catch(e){show("Speichern fehlgeschlagen: "+e.message);}
+  });
+
+  overlay.querySelector("[data-save]").onclick=stop(async()=>{
+    try{
+      show("IRON speichert die bearbeitete Version in Appwrite...");
+      const edited=await renderEditedImageDataURL(src,{rotation,brightness,contrast});
+      const name=(overlay.querySelector("[data-name]").value.trim()||meta?.name||"IRON Bild")+" – bearbeitet";
+      const description=overlay.querySelector("[data-desc]").value.trim();
+      const data=await postIronJSON("/api/images/upload",{name,description,data_url:edited});
+      currentCloudImage=data.image;
+      displayCloudImage(edited,name);
+      show("Bearbeitete Bildversion wurde in Appwrite gespeichert.");
+    }catch(e){show("Bild konnte nicht gespeichert werden: "+e.message);}
+  });
+  document.body.appendChild(overlay);
+}
+
 // ---------- APPWRITE IMAGE LIBRARY ----------
 const IRON_IMAGE_API = "https://starter-function-4j4o.fra.appwrite.run";
+let currentCloudImage = null;
 
 function extractImageRequest(text){
   let t=String(text||"").replace(/^iron[\s,.:;-]*/i,"").trim();
@@ -733,6 +900,7 @@ async function showAppwriteImage(name){
   if(!r.ok || !d?.ok || !d?.found || !d?.image?.data_url){
     throw new Error(d?.error || `Bild „${name}“ wurde in Appwrite nicht gefunden.`);
   }
+  currentCloudImage=d.image;
   displayCloudImage(d.image.data_url,d.image.name||name);
   const msg=`Bild ${d.image.name||name} aus Appwrite wird im HUD angezeigt.`;
   show(msg); speak(msg);
@@ -758,32 +926,8 @@ function parseIronJson(raw){
 }
 
 async function buildSmartPlanAndShopping(raw){
-  const prompt=`Du bist der Planungsmodus von IRON.
-Erstelle aus dem Nutzerwunsch ein zusammenhängendes Projekt mit einem Hauptplan UND passenden einzelnen Einkaufs-/Materiallisten.
-
-Nutzerwunsch:
-"${raw}"
-
-WICHTIG:
-- Das ist ALLGEMEIN: nicht nur Essen. Es kann um Gerichte, Lernen, Reisen, Projekte, Veranstaltungen, Haushalt oder andere Vorhaben gehen.
-- Falls Essen/Gerichte gemeint sind: wähle passende unterschiedliche Gerichte, nenne pro Gericht Zutaten und eine klare Zubereitung. Berücksichtige ausdrücklich genannte Eigenschaften wie "mehrere Proteinquellen", Allergien oder Vorlieben. Keine extremen Diäten oder restriktiven Regeln.
-- Falls eine Anzahl/Häufigkeit genannt wird (z.B. 3-mal pro Woche), halte sie ein.
-- Für jedes einzelne Teilprojekt/Gericht soll es eine eigene Einkaufs-/Materialliste geben.
-- Der Hauptplan soll erklären, wann/was gemacht wird und wie jedes Element durchgeführt wird.
-- Erfinde keine Preise.
-- Antworte NUR als gültiges JSON, ohne Markdown.
-
-Schema:
-{
-  "plan_name":"kurzer Name",
-  "plan":"vollständiger Plan als gut lesbarer Text",
-  "shopping_lists":[
-    {"name":"Name des Gerichts/Teilprojekts","content":"☐ Artikel 1\\n☐ Artikel 2"}
-  ]
-}`;
-  const answer=await cloud.askAI(prompt);
-  const data=parseIronJson(answer);
-  if(!data.plan || !Array.isArray(data.shopping_lists)) throw new Error("Unvollständige Plan-Antwort.");
+  const data=await postIronJSON("/api/research-plan",{request:raw});
+  if(!data.plan || !Array.isArray(data.shopping_lists)) throw new Error("Unvollständige Web-Recherche.");
   return data;
 }
 
@@ -803,11 +947,34 @@ async function saveSmartPlanAndShopping(raw){
   }
   // Die bestehenden createPlan/createShoppingList Funktionen schreiben in Appwrite.
   // Danach die Cloud-Ansicht neu laden, damit die gespeicherten Rows sofort sichtbar sind.
-  try{ await loadPlans(); }catch{}
-  try{ await loadShoppingLists(); }catch{}
+  try{ await renderPlansScreen(); }catch{}
+  try{ await renderShoppingScreen(); }catch{}
   const msg=`Plan ${planName} und ${savedLists} einzelne Einkaufslisten wurden in Appwrite gespeichert.`;
   show(msg); speak(msg);
   return data;
+}
+
+
+function calendarCommandRequested(t){
+  const x=String(t||"").toLowerCase();
+  return /\b(termin|kalender|kalendereintrag|meeting|verabredung)\b/.test(x)
+    && /\b(mach|mache|erstell|erstelle|trag|trage|eintragen|plane|plan)\b/.test(x);
+}
+async function createCalendarFromCommand(raw){
+  if(!window.IRONMobile?.isNative || typeof window.IRONMobile.createCalendarEvent!=="function"){
+    throw new Error("Kalendereinträge sind in der Android-App verfügbar.");
+  }
+  const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Luxembourg";
+  const parsed=await postIronJSON("/api/calendar/parse",{text:raw,now:new Date().toISOString(),timezone});
+  await window.IRONMobile.createCalendarEvent(parsed.event);
+  const when=new Date(parsed.event.start).toLocaleString("de-DE");
+  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.`;
+  show(msg); await speak(msg);
+  return parsed.event;
+}
+
+function mailSummaryRequested(t){
+  return /\b(mail|mails|email|e-mail)\b/i.test(t) && /\b(wichtig|wichtigste|zusammen|zusammenfass|posteingang|neueste)\b/i.test(t);
 }
 
 // ---------- COMMAND ROUTER ----------
@@ -867,6 +1034,14 @@ async function command(t){
   if(input) input.value="";
   show("Befehl wird verarbeitet...");
   try{
+    if(calendarCommandRequested(t)){
+      await createCalendarFromCommand(t);
+      return;
+    }
+    if(mailSummaryRequested(t)){
+      await summarizeImportantMails();
+      return;
+    }
     const requestedImage=extractImageRequest(t);
     if(requestedImage){
       await showAppwriteImage(requestedImage);
@@ -1187,3 +1362,16 @@ async function ironV3Weather(city='Luxembourg'){
 window.ironV3News=ironV3News;
 window.ironV3Stocks=ironV3Stocks;
 window.ironV3Weather=ironV3Weather;
+
+
+window.addEventListener("iron-cloud-voice-error", (event) => {
+  const msg = event?.detail?.message || "Cloud Voice nicht verfügbar";
+  console.error("[IRON] Eigene Stimme nicht verfügbar:", msg);
+  // Do not replace the AI answer: it remains visible in the HUD.
+  const status = document.querySelector("#statusText, #status, .status-text");
+  if (status) status.textContent = "IRON Voice momentan nicht verfügbar – Antwort bleibt als Text sichtbar.";
+});
+
+window.addEventListener("iron-app-resume",()=>{
+  if(gmailAccessToken) loadGmailInbox().catch(()=>{});
+});

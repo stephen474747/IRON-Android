@@ -150,3 +150,11 @@ nav a small{display:block;font-size:7px;letter-spacing:1.5px;margin-top:4px}
 .iron-image-viewer img{max-width:90vw;max-height:82vh;transform-origin:center center;transition:transform .12s ease}
 .iron-image-tools{position:fixed;top:18px;right:18px;display:flex;gap:10px;z-index:10001}
 .iron-image-tools button{min-width:48px;min-height:48px;font-size:26px;border-radius:50%}
+
+.iron-studio-overlay{background:rgba(0,0,0,.96)!important}
+.iron-studio{padding:72px 16px 150px;box-sizing:border-box}
+.iron-studio .iron-image-tools{left:12px;right:12px;top:12px;display:flex;flex-wrap:wrap;justify-content:center}
+.iron-studio .iron-image-tools button{border-radius:10px;min-width:44px;padding:8px}
+.iron-image-description-box{position:fixed;left:12px;right:12px;bottom:12px;background:rgba(5,15,25,.94);padding:10px;border:1px solid rgba(85,220,255,.45);z-index:10002}
+.iron-image-description-box input,.iron-image-description-box textarea{width:100%;box-sizing:border-box;margin:4px 0;padding:8px;background:#07131c;color:#e9fbff;border:1px solid rgba(85,220,255,.35)}
+.iron-image-description-box textarea{min-height:58px}

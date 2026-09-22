@@ -8,7 +8,7 @@ java_dir = android / "app" / "src" / "main" / "java" / "com" / "iron" / "assista
 java_dir.mkdir(parents=True, exist_ok=True)
 
 src = root / "native" / "android" / "com" / "iron" / "assistant"
-for name in ["MainActivity.java", "IronPhonePlugin.java"]:
+for name in ["MainActivity.java", "IronPhonePlugin.java", "IronCalendarPlugin.java"]:
     shutil.copy2(src / name, java_dir / name)
 
 manifest = android / "app" / "src" / "main" / "AndroidManifest.xml"
@@ -24,5 +24,14 @@ if contacts not in text:
 perm = '<uses-permission android:name="android.permission.CALL_PHONE" />'
 if perm not in text:
     text = text.replace("<application", perm + "\\n    <application", 1)
+
+calendar_read = '<uses-permission android:name="android.permission.READ_CALENDAR" />'
+if calendar_read not in text:
+    text = text.replace("<application", calendar_read + "\n    <application", 1)
+
+calendar_write = '<uses-permission android:name="android.permission.WRITE_CALENDAR" />'
+if calendar_write not in text:
+    text = text.replace("<application", calendar_write + "\n    <application", 1)
+
 manifest.write_text(text, encoding="utf-8")
 print("IRON Android native patch applied.")

@@ -1,74 +1,24 @@
-console.log("[IRON] Android V5.1 Cloud Voice + Conversation geladen");
+console.log("[IRON] Android V6 Core Integration geladen");
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { App } from '@capacitor/app';
 import { Camera } from '@capacitor/camera';
-import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { SpeechRecognition } from '@capgo/capacitor-speech-recognition';
 
 const IronPhone = registerPlugin('IronPhone');
+const IronCalendar = registerPlugin('IronCalendar');
 
 const state = {
   native: Capacitor.isNativePlatform(),
-  voiceIndex: undefined,
 };
 
 function log(...args){ console.log('[IRON Mobile]', ...args); }
-
-async function chooseMaleGermanVoice(){
-  try{
-    const result = await TextToSpeech.getSupportedVoices();
-    const voices = result?.voices || [];
-    const maleHints = ['conrad','stefan','hans','markus','michael','male','mann','männlich'];
-    let bestIndex = -1, bestScore = -1;
-
-    voices.forEach((v, i)=>{
-      const name = String(v?.name || '').toLowerCase();
-      const lang = String(v?.lang || '').toLowerCase();
-      let score = 0;
-      if(lang.startsWith('de')) score += 100;
-      if(v?.localService) score += 10;
-      for(const hint of maleHints) if(name.includes(hint)) score += 40;
-      if(score > bestScore){ bestScore = score; bestIndex = i; }
-    });
-
-    if(bestIndex >= 0){
-      state.voiceIndex = bestIndex;
-      log('TTS voice:', voices[bestIndex]?.name, voices[bestIndex]?.lang);
-    }
-  }catch(e){
-    console.warn('[IRON Mobile] voice detection:', e);
-  }
-}
 
 const CLOUD_BASE = 'https://starter-function-4j4o.fra.appwrite.run';
 let activeAudio = null;
 let conversationMode = false;
 let conversationBusy = false;
-
-async function systemSpeak(value){
-  await TextToSpeech.stop().catch(()=>{});
-  await TextToSpeech.speak({
-    text: value, lang:'de-DE', rate:0.92, pitch:0.78, volume:1.0,
-    ...(Number.isInteger(state.voiceIndex) ? { voice: state.voiceIndex } : {})
-  });
-}
-
-async function cloudSpeak(value){
-  const r = await fetch(`${CLOUD_BASE}/api/tts`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text:value})
-  });
-  const data = await r.json().catch(()=>({}));
-  if(!r.ok || !data?.ok || !data?.audio_base64) throw new Error(data?.error || `TTS HTTP ${r.status}`);
-  if(activeAudio){ try{activeAudio.pause();}catch{} activeAudio=null; }
-  const audio = new Audio(`data:${data.mime_type || 'audio/mpeg'};base64,${data.audio_base64}`);
-  activeAudio=audio;
-  await audio.play();
-  await new Promise((resolve,reject)=>{ audio.onended=resolve; audio.onerror=()=>reject(new Error('Audio konnte nicht abgespielt werden.')); });
-  activeAudio=null;
-}
-
 
 function cleanSpeechText(value) {
   return String(value ?? "")
@@ -81,23 +31,61 @@ function cleanSpeechText(value) {
     .trim();
 }
 
-async function speak(text){
-  const value=String(text||'').trim(); if(!value) return;
-  try{ await cloudSpeak(value); }
-  catch(e){ console.warn('[IRON Mobile] Cloud TTS fallback:',e); try{await systemSpeak(value);}catch(err){console.warn('[IRON Mobile] TTS:',err);} }
+async function speak(text) {
+  text = cleanSpeechText(text);
+  if (!text) return;
+
+  // V5.5: IRON has its own cloud voice. Never fall back to the phone's TTS voice.
+  try {
+    const response = await fetch(`${CLOUD_BASE}/api/tts`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ text })
+    });
+
+    let data = null;
+    try { data = await response.json(); } catch {}
+
+    if (!response.ok || !data?.ok || !data?.audio_base64) {
+      throw new Error(data?.error || `Cloud Voice HTTP ${response.status}`);
+    }
+
+    if (activeAudio) { try { activeAudio.pause(); } catch {} activeAudio=null; }
+
+    const audio = new Audio(`data:${data.mime_type || "audio/mpeg"};base64,${data.audio_base64}`);
+    activeAudio = audio;
+
+    await new Promise((resolve, reject) => {
+      audio.onended = resolve;
+      audio.onerror = () => reject(new Error("IRON Cloud Voice konnte nicht abgespielt werden."));
+      audio.play().catch(reject);
+    });
+  } catch (error) {
+    console.error("[IRON CLOUD VOICE]", error);
+    // Deliberately NO Android/Xiaomi TTS fallback.
+    // The answer remains visible as text in the HUD.
+    window.dispatchEvent(new CustomEvent("iron-cloud-voice-error", {
+      detail: { message: String(error?.message || error) }
+    }));
+  } finally {
+    activeAudio = null;
+  }
 }
 
-async function stopSpeaking(){
-  if(activeAudio){ try{activeAudio.pause(); activeAudio.currentTime=0;}catch{} activeAudio=null; }
-  await TextToSpeech.stop().catch(()=>{});
+async function stopSpeaking() {
+  if(activeAudio){
+    try{ activeAudio.pause(); activeAudio.currentTime=0; }catch{}
+    activeAudio=null;
+  }
 }
+
 
 async function runConversationTurn(){
   if(!conversationMode || conversationBusy) return;
   conversationBusy=true;
   try{
     const text=await listenOnce();
-    if(text && typeof window.command==='function') await window.command(text);
+    if(text && typeof window.command==='function') { await window.command(text); if(window.__ironLastSpeechPromise) await window.__ironLastSpeechPromise.catch(()=>{}); }
   }catch(e){ console.warn('[IRON Mobile] conversation:',e); }
   finally{
     conversationBusy=false;
@@ -321,6 +309,7 @@ async function cloudSelfTest(){
 async function callContactByName(name){
   if(!isNative) throw new Error('Kontaktanrufe sind nur in der Android-App verfügbar.');
   const IronPhone = registerPlugin('IronPhone');
+const IronCalendar = registerPlugin('IronCalendar');
   const found = await IronPhone.lookupContact({ name:String(name||'').trim() });
   if(!found?.number) throw new Error('Keine Telefonnummer für diesen Kontakt gefunden.');
   await speak(`Ich rufe ${found.name || name} an.`);
@@ -346,6 +335,20 @@ function installContactVoiceCommands(){
   };
 }
 
+
+async function createCalendarEvent(event){
+  if(!state.native) throw new Error("Kalender ist nur in der Android-App verfügbar.");
+  return IronCalendar.createEvent({
+    title:String(event?.title||"Termin"),
+    description:String(event?.description||""),
+    location:String(event?.location||""),
+    start:String(event?.start||""),
+    end:String(event?.end||""),
+    timezone:String(Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Luxembourg"),
+    reminderMinutes:Number.isFinite(Number(event?.reminder_minutes)) ? Number(event.reminder_minutes) : 15
+  });
+}
+
 async function init(){
   if(!state.native){
     log('Browser mode');
@@ -353,10 +356,10 @@ async function init(){
   }
 
   log('Android native mode');
-  await chooseMaleGermanVoice();
   await requestNotifications().catch(()=>{});
   cloudSelfTest().catch(()=>{});
   setTimeout(installContactVoiceCommands, 500);
+  App.addListener('appStateChange',({isActive})=>{ if(isActive) window.dispatchEvent(new Event('iron-app-resume')); });
 
   installHudControls();
   installTaskReminderUI();
@@ -372,6 +375,7 @@ window.IRONMobile = {
   callNumber,
   cloudSelfTest,
   callContactByName,
+  createCalendarEvent,
   startConversation,
   stopConversation,
   stopSpeaking,
