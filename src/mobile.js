@@ -152,6 +152,15 @@ async function scheduleNotification({title='IRON TASK', body='Task-Erinnerung', 
   return { id: notificationId, at: when.toISOString() };
 }
 
+
+async function cancelNotification(id){
+  const notificationId=Number(id);
+  if(!Number.isFinite(notificationId)) return false;
+  await LocalNotifications.cancel({notifications:[{id:notificationId}]});
+  return true;
+}
+
+
 async function listenOnce(){
   let p = await SpeechRecognition.checkPermissions();
   if(p?.speechRecognition !== 'granted') p = await SpeechRecognition.requestPermissions();
@@ -479,6 +488,7 @@ window.IRONMobile = {
   speak,
   listenOnce,
   scheduleNotification,
+  cancelNotification,
   requestNotifications,
   pickHudImage,
   callNumber,
