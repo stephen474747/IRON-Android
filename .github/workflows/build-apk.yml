@@ -1,4 +1,4 @@
-name: Build IRON Android V6.1 APK
+name: Build IRON Android V6.2 APK
 
 on:
   workflow_dispatch:
@@ -28,9 +28,13 @@ jobs:
       - name: Dependencies installieren
         run: npm install
 
+      - name: Client-Routen prüfen
+        run: python3 scripts/audit_client_routes.py
+
       - name: JavaScript prüfen
         run: |
           node --check www/app.js
+          node --check www/iron-menu.js
           node --check src/mobile.js
 
       - name: IRON Mobile Code bauen
@@ -51,7 +55,7 @@ jobs:
       - name: Gradle ausführbar machen
         run: chmod +x android/gradlew
 
-      - name: IRON V6.1 APK bauen
+      - name: IRON V6.2 APK bauen
         working-directory: android
         run: ./gradlew assembleDebug
 
@@ -60,10 +64,10 @@ jobs:
           test -f android/app/build/outputs/apk/debug/app-debug.apk
           ls -lh android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: IRON V6.1 APK bereitstellen
+      - name: IRON V6.2 APK bereitstellen
         uses: actions/upload-artifact@v4
         with:
-          name: IRON-Android-V6.1
+          name: IRON-Android-V6.2
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
