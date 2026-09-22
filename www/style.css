@@ -158,3 +158,24 @@ nav a small{display:block;font-size:7px;letter-spacing:1.5px;margin-top:4px}
 .iron-image-description-box{position:fixed;left:12px;right:12px;bottom:12px;background:rgba(5,15,25,.94);padding:10px;border:1px solid rgba(85,220,255,.45);z-index:10002}
 .iron-image-description-box input,.iron-image-description-box textarea{width:100%;box-sizing:border-box;margin:4px 0;padding:8px;background:#07131c;color:#e9fbff;border:1px solid rgba(85,220,255,.35)}
 .iron-image-description-box textarea{min-height:58px}
+
+/* V6.1 dedicated Appwrite Photo Library */
+.photos-page{padding-bottom:110px}
+.photo-upload-panel{margin:18px 0;padding:16px;border:1px solid rgba(90,220,255,.25);background:rgba(5,15,25,.72)}
+.photo-upload-panel input,.photo-upload-panel textarea{width:100%;box-sizing:border-box;margin:7px 0;padding:12px;background:#07131c;color:#eafcff;border:1px solid rgba(90,220,255,.3);border-radius:8px}
+.photo-upload-panel textarea{min-height:76px;resize:vertical}
+.photo-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.photo-actions button{flex:1;min-width:130px;padding:11px}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px}
+.photo-card{border:1px solid rgba(90,220,255,.22);background:rgba(5,15,25,.84);overflow:hidden;border-radius:12px}
+.photo-thumb{aspect-ratio:4/3;background:#03080c;display:flex;align-items:center;justify-content:center;color:#69dfff;font-size:11px}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-meta{padding:10px}
+.photo-meta h3{font-size:14px;margin:0 0 6px}
+.photo-meta p{font-size:11px;opacity:.78;min-height:30px;margin:0 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.photo-meta small{display:block;opacity:.55;margin-bottom:8px}
+.photo-meta button{width:100%;padding:8px;font-size:10px}
+.floating-response{position:fixed;left:10px;right:10px;bottom:78px;background:rgba(3,10,15,.94);border:1px solid rgba(90,220,255,.3);padding:8px 10px;z-index:20;font-size:11px;pointer-events:none}
+.nav-six{grid-template-columns:repeat(6,1fr)}
+.nav-six a{min-width:0}
+.nav-six small{font-size:8px}

@@ -892,29 +892,22 @@ function displayCloudImage(dataUrl, name="IRON Bild"){
 }
 
 async function showAppwriteImage(name){
-  show(`IRON sucht „${name}“ in Appwrite...`);
-  const url=`${IRON_IMAGE_API}/api/images/search?name=${encodeURIComponent(name)}`;
-  const r=await fetch(url,{method:"GET",cache:"no-store"});
-  let d=null;
-  try{ d=await r.json(); }catch{}
-  if(!r.ok || !d?.ok || !d?.found || !d?.image?.data_url){
-    throw new Error(d?.error || `Bild „${name}“ wurde in Appwrite nicht gefunden.`);
-  }
-  currentCloudImage=d.image;
-  displayCloudImage(d.image.data_url,d.image.name||name);
-  const msg=`Bild ${d.image.name||name} aus Appwrite wird im HUD angezeigt.`;
-  show(msg); speak(msg);
-  return d.image;
+  // Dedicated photo screen: do not use HUD for cloud photos anymore.
+  const target=`photos.html?name=${encodeURIComponent(name)}`;
+  sessionStorage.setItem("iron_photo_open_name",name);
+  location.href=target;
+  return {ok:true,name};
 }
-
 
 function smartPlanAndShoppingRequested(t){
   const x=String(t||"").toLowerCase();
-  const hasPlan=/(plan|wochenplan|tagesplan|programm|ablauf)/i.test(x);
-  const hasShopping=/(einkauf|einkaufsliste|zutaten|materialliste|materialien|besorgung)/i.test(x);
-  // Also catch requests like "3 Gerichte pro Woche ... Einkaufsliste ... wie zubereiten"
-  const multi=/(\b\d+\b.*(?:gericht|mahlzeit|projekt|aktivität|aktivitaet)|(?:gericht|mahlzeit|projekt).*\b\d+\b)/i.test(x);
-  return (hasPlan && hasShopping) || (hasShopping && multi);
+  const food=/\b(gericht|gerichte|rezept|rezepte|mahlzeit|mahlzeiten|kochen|zubereiten|zutaten)\b/i.test(x);
+  const plan=/\b(plan|wochenplan|tagesplan|woche|tage|mal pro woche|pro woche|ablauf)\b/i.test(x);
+  const shopping=/\b(einkauf|einkaufsliste|einkaufslisten|zutatenliste|zutaten|materialliste|materialien)\b/i.test(x);
+  const multi=/\b([2-9]|10|11|12)\b.*\b(gericht|gerichte|mahlzeit|mahlzeiten|rezept|rezepte)\b/i.test(x);
+  // Recipe requests with schedule/list intent always use the researched combined mode.
+  if(food && (plan || shopping || multi)) return true;
+  return plan && shopping;
 }
 
 function parseIronJson(raw){
@@ -931,29 +924,65 @@ async function buildSmartPlanAndShopping(raw){
   return data;
 }
 
+function formatRecipeShopping(recipe){
+  const rows=(recipe.ingredients||[]).map(x=>{
+    const amount=String(x.amount||"").trim();
+    const item=String(x.item||"").trim();
+    return `☐ ${amount ? amount+" " : ""}${item}`.trim();
+  }).filter(Boolean);
+  const source=recipe.source_url ? `\n\nQuelle: ${recipe.source_title||recipe.source_url}\n${recipe.source_url}` : "";
+  return `${recipe.name}${recipe.servings?`\nPortionen: ${recipe.servings}`:""}\n\n${rows.join("\n")}${source}`;
+}
+
+function formatRecipePlan(data){
+  const schedule=(data.schedule||[]).map(x=>`• ${x.slot}: ${x.recipe_name}`).join("\n");
+  const recipes=(data.recipes||[]).map((r,idx)=>{
+    const steps=(r.steps||[]).map((s,i)=>`${i+1}. ${s}`).join("\n");
+    const source=r.source_url?`\nQuelle: ${r.source_title||r.source_url}\n${r.source_url}`:"";
+    return `${idx+1}. ${r.name}${r.servings?` (${r.servings})`:""}\n\nZubereitung:\n${steps}${source}`;
+  }).join("\n\n────────────────────\n\n");
+  return `${data.plan_summary||""}${schedule?`\n\nWOCHEN-/ABLAUFPLAN\n${schedule}`:""}\n\n${recipes}`.trim();
+}
+
 async function saveSmartPlanAndShopping(raw){
-  show("IRON erstellt Plan und einzelne Einkaufslisten...");
+  show("IRON sucht passende Rezepte/Ideen online und erstellt Plan + Einkaufslisten...");
   const data=await buildSmartPlanAndShopping(raw);
+
+  if(Array.isArray(data.recipes) && data.recipes.length){
+    const planName=String(data.plan_name||"IRON Rezeptplan").slice(0,180);
+    const planText=formatRecipePlan(data);
+    await createPlan(planName,planText);
+
+    let savedLists=0;
+    for(const recipe of data.recipes){
+      const content=formatRecipeShopping(recipe);
+      if(content.trim()){
+        await createShoppingList(recipe.name,content);
+        savedLists++;
+      }
+    }
+    try{ await renderPlansScreen(); }catch{}
+    try{ await renderShoppingScreen(); }catch{}
+    const msg=`Online-Recherche fertig. ${data.recipes.length} Gerichte gefunden, Plan gespeichert und ${savedLists} Einkaufslisten gespeichert.`;
+    show(msg); await speak(msg);
+    return data;
+  }
+
+  // General non-food project fallback.
   const planName=String(data.plan_name||"IRON Plan").slice(0,180);
-  const savedPlan = await createPlan(planName,String(data.plan));
-  let savedLists = 0;
-  for(const list of data.shopping_lists){
-    const n=String(list?.name||"Einkauf").slice(0,140);
-    const c=String(list?.content||"").trim();
-    if(c){
-      await createShoppingList(`Einkauf – ${n}`,c);
+  const planText=String(data.plan||data.plan_summary||"").trim();
+  if(planText) await createPlan(planName,planText);
+  let savedLists=0;
+  for(const list of (data.shopping_lists||[])){
+    if(String(list?.content||"").trim()){
+      await createShoppingList(list.name||"Einkauf",list.content);
       savedLists++;
     }
   }
-  // Die bestehenden createPlan/createShoppingList Funktionen schreiben in Appwrite.
-  // Danach die Cloud-Ansicht neu laden, damit die gespeicherten Rows sofort sichtbar sind.
-  try{ await renderPlansScreen(); }catch{}
-  try{ await renderShoppingScreen(); }catch{}
-  const msg=`Plan ${planName} und ${savedLists} einzelne Einkaufslisten wurden in Appwrite gespeichert.`;
-  show(msg); speak(msg);
+  const msg=`Plan und ${savedLists} Einkaufs-/Materiallisten wurden gespeichert.`;
+  show(msg); await speak(msg);
   return data;
 }
-
 
 function calendarCommandRequested(t){
   const x=String(t||"").toLowerCase();
@@ -975,6 +1004,118 @@ async function createCalendarFromCommand(raw){
 
 function mailSummaryRequested(t){
   return /\b(mail|mails|email|e-mail)\b/i.test(t) && /\b(wichtig|wichtigste|zusammen|zusammenfass|posteingang|neueste)\b/i.test(t);
+}
+
+
+// ---------- DEDICATED PHOTO LIBRARY ----------
+async function ironImageGet(id,preview=false){
+  return fetchIronJSON(`/api/images/get?id=${encodeURIComponent(id)}${preview?"&preview=1":""}`);
+}
+
+async function renderPhotoLibrary(){
+  const grid=$("#photoGrid");
+  const state=$("#photoLibraryState");
+  if(!grid) return;
+  grid.innerHTML="<p>Lade alle Appwrite-Fotos…</p>";
+  if(state) state.textContent="APPWRITE // SYNC";
+
+  try{
+    const data=await fetchIronJSON("/api/images/list");
+    const images=Array.isArray(data.images)?data.images:[];
+    if(state) state.textContent=`${images.length} FOTOS`;
+    if(!images.length){
+      grid.innerHTML="<article class='saved-card'><h3>NO PHOTOS</h3><p>In iron_images wurden keine Bilder gefunden.</p></article>";
+      return;
+    }
+
+    grid.innerHTML=images.map(img=>`
+      <article class="photo-card" data-photo-id="${escapeHtml(img.id)}">
+        <div class="photo-thumb" data-thumb="${escapeHtml(img.id)}"><span>LOADING</span></div>
+        <div class="photo-meta">
+          <h3>${escapeHtml(img.name||"IRON Bild")}</h3>
+          <p>${escapeHtml(img.description||"Keine Beschreibung")}</p>
+          <small>${escapeHtml(formatDate(img.created_at))}</small>
+          <button data-open-photo="${escapeHtml(img.id)}">ÖFFNEN / BEARBEITEN</button>
+        </div>
+      </article>
+    `).join("");
+
+    // Load thumbnails in small batches so the screen stays responsive.
+    const queue=[...images];
+    const workers=Array.from({length:Math.min(4,queue.length)},async()=>{
+      while(queue.length){
+        const img=queue.shift();
+        try{
+          const d=await ironImageGet(img.id,true);
+          const host=grid.querySelector(`[data-thumb="${CSS.escape(img.id)}"]`);
+          if(host && d?.image?.data_url){
+            host.innerHTML=`<img src="${d.image.data_url}" alt="${escapeHtml(img.name||"IRON Bild")}">`;
+          }
+        }catch(e){
+          const host=grid.querySelector(`[data-thumb="${CSS.escape(img.id)}"]`);
+          if(host) host.innerHTML="<span>PREVIEW ERROR</span>";
+        }
+      }
+    });
+    await Promise.all(workers);
+
+    grid.querySelectorAll("[data-open-photo]").forEach(btn=>{
+      btn.onclick=()=>openPhotoLibraryItem(btn.dataset.openPhoto);
+    });
+
+    const wanted=new URLSearchParams(location.search).get("name") || sessionStorage.getItem("iron_photo_open_name");
+    if(wanted){
+      sessionStorage.removeItem("iron_photo_open_name");
+      const hit=images
+        .map(x=>({x,score:imageNameScore(x.name,wanted)}))
+        .sort((p,q)=>q.score-p.score)[0];
+      if(hit?.score>0) await openPhotoLibraryItem(hit.x.id);
+      else show(`Bild „${wanted}“ wurde in Appwrite nicht gefunden.`);
+    }
+  }catch(e){
+    if(state) state.textContent="ERROR";
+    grid.innerHTML=`<article class="saved-card"><h3>APPWRITE FOTO-FEHLER</h3><p>${escapeHtml(e.message)}</p></article>`;
+  }
+}
+
+function imageNameScore(name,q){
+  const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+  const a=norm(name),b=norm(q);
+  if(a===b)return 100;
+  if(a.includes(b)||b.includes(a))return 70;
+  const aw=new Set(a.split(/\s+/)), bw=b.split(/\s+/);
+  return bw.reduce((n,w)=>n+(aw.has(w)?10:0),0);
+}
+
+async function openPhotoLibraryItem(id){
+  show("IRON lädt das Foto aus Appwrite...");
+  const data=await ironImageGet(id,false);
+  if(!data?.image?.data_url) throw new Error("Bilddaten fehlen.");
+  currentCloudImage=data.image;
+  openImageStudio(data.image.data_url,data.image);
+}
+
+async function uploadPhotoLibraryFile(){
+  const file=$("#photoUploadFile")?.files?.[0];
+  const name=$("#photoUploadName")?.value?.trim() || file?.name?.replace(/\.[^.]+$/,"") || "IRON Bild";
+  const description=$("#photoUploadDescription")?.value?.trim() || "";
+  if(!file){ show("Wähle zuerst ein Bild aus."); return; }
+  if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){ show("Erlaubt sind JPG, PNG und WEBP."); return; }
+  if(file.size>10*1024*1024){ show("Das Bild darf maximal 10 MB groß sein."); return; }
+
+  const dataUrl=await new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=()=>reject(new Error("Bild konnte nicht gelesen werden."));
+    r.readAsDataURL(file);
+  });
+  show("IRON lädt das Bild zu Appwrite hoch...");
+  await postIronJSON("/api/images/upload",{name,description,data_url:dataUrl});
+  if($("#photoUploadFile")) $("#photoUploadFile").value="";
+  if($("#photoUploadName")) $("#photoUploadName").value="";
+  if($("#photoUploadDescription")) $("#photoUploadDescription").value="";
+  await renderPhotoLibrary();
+  show("Bild wurde in Appwrite gespeichert.");
 }
 
 // ---------- COMMAND ROUTER ----------
@@ -1374,4 +1515,13 @@ window.addEventListener("iron-cloud-voice-error", (event) => {
 
 window.addEventListener("iron-app-resume",()=>{
   if(gmailAccessToken) loadGmailInbox().catch(()=>{});
+});
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const path=(location.pathname||"").toLowerCase();
+  if(path.includes("photos")){
+    renderPhotoLibrary().catch(e=>show("Foto-Bibliothek: "+e.message));
+    const refresh=$("#photoRefreshBtn"); if(refresh) refresh.onclick=()=>renderPhotoLibrary();
+    const upload=$("#photoUploadBtn"); if(upload) upload.onclick=()=>uploadPhotoLibraryFile().catch(e=>show("Upload-Fehler: "+e.message));
+  }
 });
