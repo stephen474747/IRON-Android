@@ -1,6 +1,6 @@
 {
   "name": "iron-android",
-  "version": "6.2.0",
+  "version": "6.2.1",
   "private": true,
   "scripts": {
     "build:mobile": "esbuild src/mobile.js --bundle --platform=browser --format=iife --global-name=IRONMobileBundle --outfile=www/mobile-bridge.js",

@@ -697,14 +697,22 @@ async function fetchIronJSON(path){
 
 async function postIronJSON(path,body){
   const call=async p=>{
-    const r=await fetch(cloud.cfg.functionDomain+p,{
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=UTF-8"},
-      body:JSON.stringify(body||{}),
-      cache:"no-store"
-    });
-    const j=await r.json().catch(()=>null);
-    return {r,j,p};
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),90000);
+    try{
+      const r=await fetch(cloud.cfg.functionDomain+p,{
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=UTF-8"},
+        body:JSON.stringify(body||{}),
+        cache:"no-store",
+        signal:controller.signal
+      });
+      const j=await r.json().catch(()=>null);
+      return {r,j,p};
+    }catch(e){
+      if(e?.name==="AbortError") throw new Error(`IRON Cloud Timeout bei ${p}. Die Recherche hat zu lange gedauert.`);
+      throw new Error(`IRON Cloud Netzwerkfehler bei ${p}: ${e?.message||e}`);
+    }finally{clearTimeout(timer)}
   };
 
   let {r,j,p}=await call(path);
@@ -952,8 +960,9 @@ function parseIronJson(raw){
 }
 
 async function buildSmartPlanAndShopping(raw){
-  const data=await postIronJSON("/api/research-plan",{request:raw});
-  if(!data.plan || !Array.isArray(data.shopping_lists)) throw new Error("Unvollständige Web-Recherche.");
+  const data=await postIronJSON("/api/research-plan",{request:raw,save:true});
+  if(!data?.web_researched) throw new Error("IRON konnte die Web-Recherche nicht abschließen.");
+  if(!data?.saved) throw new Error("Der Plan wurde recherchiert, aber noch nicht in Appwrite gespeichert.");
   return data;
 }
 
@@ -978,42 +987,20 @@ function formatRecipePlan(data){
 }
 
 async function saveSmartPlanAndShopping(raw){
-  show("IRON sucht passende Rezepte/Ideen online und erstellt Plan + Einkaufslisten...");
+  show("IRON recherchiert online und speichert Plan + Einkaufslisten direkt in Appwrite...");
   const data=await buildSmartPlanAndShopping(raw);
 
-  if(Array.isArray(data.recipes) && data.recipes.length){
-    const planName=String(data.plan_name||"IRON Rezeptplan").slice(0,180);
-    const planText=formatRecipePlan(data);
-    await createPlan(planName,planText);
+  try{ await renderPlansScreen(); }catch{}
+  try{ await renderShoppingScreen(); }catch{}
 
-    let savedLists=0;
-    for(const recipe of data.recipes){
-      const content=formatRecipeShopping(recipe);
-      if(content.trim()){
-        await createShoppingList(recipe.name,content);
-        savedLists++;
-      }
-    }
-    try{ await renderPlansScreen(); }catch{}
-    try{ await renderShoppingScreen(); }catch{}
-    const msg=`Online-Recherche fertig. ${data.recipes.length} Gerichte gefunden, Plan gespeichert und ${savedLists} Einkaufslisten gespeichert.`;
-    show(msg); await speak(msg);
-    return data;
-  }
+  const recipeCount=Array.isArray(data.recipes)?data.recipes.length:0;
+  const savedLists=Number(data.saved_shopping||0);
+  const msg=recipeCount
+    ? `Fertig. ${recipeCount} Rezepte online recherchiert. Der Plan und ${savedLists} Einkaufslisten wurden in Appwrite gespeichert.`
+    : `Fertig. Der recherchierte Plan wurde in Appwrite gespeichert.`;
 
-  // General non-food project fallback.
-  const planName=String(data.plan_name||"IRON Plan").slice(0,180);
-  const planText=String(data.plan||data.plan_summary||"").trim();
-  if(planText) await createPlan(planName,planText);
-  let savedLists=0;
-  for(const list of (data.shopping_lists||[])){
-    if(String(list?.content||"").trim()){
-      await createShoppingList(list.name||"Einkauf",list.content);
-      savedLists++;
-    }
-  }
-  const msg=`Plan und ${savedLists} Einkaufs-/Materiallisten wurden gespeichert.`;
-  show(msg); await speak(msg);
+  show(msg);
+  await speak(msg);
   return data;
 }
 
