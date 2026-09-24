@@ -309,69 +309,11 @@ async function renderTasksScreen(){
   el.innerHTML="<p class='muted'>Lade Cloud-Tasks...</p>";
   try{
     const tasks=await cloud.list(cloud.cfg.tables.tasks,[cloud.Query.orderDesc("$createdAt"), cloud.Query.limit(100)]);
-    let reminderMap={};
-    try{ reminderMap=JSON.parse(localStorage.getItem("iron_task_reminders")||"{}")||{}; }catch{}
-
-    const classify=t=>{
-      if(t.erledigt) return "done";
-      const r=reminderMap[t.$id];
-      const text=String(t.text||"").toLowerCase();
-      if(r?.important || /\b(wichtig|dringend|unbedingt|priorität|prioritaet)\b/i.test(text)) return "important";
-      return "today";
-    };
-
-    const priority=t=>{
-      const r=reminderMap[t.$id];
-      return (r?.important || /\b(wichtig|dringend|unbedingt|priorität|prioritaet)\b/i.test(String(t.text||""))) ? "HOCH" : "NORMAL";
-    };
-
-    const taskCard=t=>{
-      const r=reminderMap[t.$id];
-      const pr=priority(t);
-      return `<article class="v73-task-row task-card ${t.erledigt?"done":""} ${r?"has-reminder":""}">
-        <label class="v73-task-check">
-          <input type="checkbox" ${t.erledigt?"checked":""} onchange="toggleTaskAndRefresh('${escapeHtml(t.$id)}',this.checked)">
-          <span><b>${escapeHtml(t.text||"Task")}</b><small>${escapeHtml(t.datum||"Offen")}</small></span>
-        </label>
-        <div class="v73-task-meta">
-          <span class="v73-task-date">◷ ${escapeHtml(t.datum||"Offen")}</span>
-          <span class="v73-priority ${pr==="HOCH"?"high":"normal"}">▮▮▮ ${pr}</span>
-        </div>
-        <button class="v73-bell ${r?"active":""}" data-task-reminder="${escapeHtml(t.$id)}" data-task-text="${escapeHtml(t.text||"Task")}" title="${r?"Erinnerung aktiv":"Benachrichtigung einschalten"}">♧</button>
-        <button class="v73-task-more" data-delete-task="${escapeHtml(t.$id)}">⋮</button>
-      </article>`;
-    };
-
-    const group=(name,icon,rows,extra="")=>`
-      <section class="v73-task-section ${extra}">
-        <header><span>${icon} ${name}</span><small>${rows.length}</small></header>
-        ${rows.length?rows.map(taskCard).join(""):`<p class="v73-empty-row">Keine Aufgaben.</p>`}
-      </section>`;
-
-    const today=tasks.filter(t=>classify(t)==="today");
-    const important=tasks.filter(t=>classify(t)==="important");
-    const done=tasks.filter(t=>classify(t)==="done");
-
-    el.innerHTML=tasks.length
-      ? group("HEUTE","◎",today)+group("WICHTIG","☆",important,"important")+group("ERLEDIGT","✓",done,"done")
-      : `<div class="empty-screen"><div>✓</div><strong>NO TASKS</strong><p>Zum Beispiel: „Erstelle eine Task Zimmer aufräumen.“</p></div>`;
-
-    if($("#v73TodayBadge")) $("#v73TodayBadge").textContent=today.length;
-    if($("#v73ImportantBadge")) $("#v73ImportantBadge").textContent=important.length;
-    if($("#v73DoneBadge")) $("#v73DoneBadge").textContent=done.length;
-
-    el.querySelectorAll("[data-delete-task]").forEach(btn=>{
-      btn.onclick=async()=>{
-        if(confirm("Task löschen?")){
-          await deleteTask(btn.dataset.deleteTask);
-        }
-      };
-    });
-
-    window.dispatchEvent(new CustomEvent("iron-tasks-rendered",{detail:{tasks}}));
-  }catch(e){
-    el.innerHTML=`<p class='muted'>Cloud-Tasks konnten nicht geladen werden: ${escapeHtml(e.message)}</p>`;
-  }
+    el.innerHTML=tasks.length?tasks.map(t=>`<article class="data-card task-card screen-task ${t.erledigt?"done":""}">
+      <label><input type="checkbox" ${t.erledigt?"checked":""} onchange="toggleTaskAndRefresh('${t.$id}',this.checked)"><span>${escapeHtml(t.text)}</span></label>
+      <small>${escapeHtml(t.datum||"Offen")}</small></article>`).join(""):
+      `<div class="empty-screen"><div>✓</div><strong>NO TASKS</strong><p>Zum Beispiel: „Erstelle eine Task Zimmer aufräumen.“</p></div>`;
+  }catch(e){ el.innerHTML=`<p class='muted'>Cloud-Tasks konnten nicht geladen werden: ${escapeHtml(e.message)}</p>`; }
 }
 async function toggleTaskAndRefresh(id,done){ await cloud.update(cloud.cfg.tables.tasks,id,{erledigt:done}); renderTasksScreen(); }
 async function deleteTask(id){ await cloud.remove(cloud.cfg.tables.tasks,id); renderTasksScreen(); }
@@ -379,12 +321,9 @@ async function deleteTask(id){ await cloud.remove(cloud.cfg.tables.tasks,id); re
 async function renderPlans(){ return renderPlansScreen(); }
 async function renderPlansScreen(){
   const host=$("#plansList") || $("#planList") || $("#plansContainer");
-  const educationHost=$("#educationPlans");
-  const bodyHost=$("#bodyPlans");
-  const nutritionHost=$("#nutritionPlans");
-  if(!host && !educationHost && !bodyHost && !nutritionHost) return;
+  if(!host) return;
 
-  [host,educationHost,bodyHost,nutritionHost].filter(Boolean).forEach(x=>x.innerHTML="<p>Lade Pläne…</p>");
+  host.innerHTML="<p>Lade Pläne…</p>";
 
   let rows=[];
   try{
@@ -394,6 +333,7 @@ async function renderPlansScreen(){
     console.warn("Appwrite plans read:",e);
   }
 
+  // Fallback/instant cache: useful directly after save and if a read is delayed.
   try{
     const cached=JSON.parse(localStorage.getItem("iron_plans_cache")||"[]");
     const ids=new Set(rows.map(r=>r.$id).filter(Boolean));
@@ -406,40 +346,24 @@ async function renderPlansScreen(){
     .filter(r=>String(r.typ||"").toLowerCase()!=="einkauf" && !String(r.name||"").startsWith("EINKAUF // "))
     .sort((a,b)=>String(b.erstellt||"").localeCompare(String(a.erstellt||"")));
 
-  const categoryOf=r=>{
-    const text=`${r.name||""} ${r.inhalt||""}`.toLowerCase();
-    if(/\b(ernährung|ernaehrung|rezept|mahlzeit|essen|kochen|lebensmittel|protein|zutat)\b/i.test(text)) return "nutrition";
-    if(/\b(körper|koerper|fitness|training|sport|workout|kraft|laufen|bewegung)\b/i.test(text)) return "body";
-    return "education";
-  };
+  if(!rows.length){
+    host.innerHTML="<p>Noch keine Pläne gespeichert.</p>";
+    return;
+  }
 
-  const card=r=>`
-    <article class="v73-plan-saved">
-      <header><h3>${escapeHtml(r.name||"Plan")}</h3><small>${escapeHtml(formatDate(r.erstellt))}</small></header>
+  host.innerHTML=rows.map(r=>`
+    <article class="saved-card">
+      <header>
+        <h3>${escapeHtml(r.name||"Plan")}</h3>
+        <small>${escapeHtml(formatDate(r.erstellt))}</small>
+      </header>
       <pre>${escapeHtml(r.inhalt||"")}</pre>
       ${r.$id && !String(r.$id).startsWith("local_")
         ? `<button data-delete-plan="${escapeHtml(r.$id)}">LÖSCHEN</button>` : ""}
-    </article>`;
+    </article>
+  `).join("");
 
-  const education=rows.filter(r=>categoryOf(r)==="education");
-  const body=rows.filter(r=>categoryOf(r)==="body");
-  const nutrition=rows.filter(r=>categoryOf(r)==="nutrition");
-
-  const fill=(el,list,empty)=>{
-    if(!el) return;
-    el.innerHTML=list.length?list.map(card).join(""):`<p class="v73-empty-plan">${empty}</p>`;
-  };
-  fill(educationHost,education,"Noch kein Bildungs-/Lernplan.");
-  fill(bodyHost,body,"Noch kein Körper-/Fitnessplan.");
-  fill(nutritionHost,nutrition,"Noch kein Ernährungsplan.");
-  if(host) host.innerHTML=rows.map(card).join("");
-
-  if($("#v73EducationCount")) $("#v73EducationCount").textContent=education.length;
-  if($("#v73BodyCount")) $("#v73BodyCount").textContent=body.length;
-  if($("#v73NutritionCount")) $("#v73NutritionCount").textContent=nutrition.length;
-  if($("#v7PlanCount")) $("#v7PlanCount").textContent=`${rows.length} PLÄNE`;
-
-  document.querySelectorAll("[data-delete-plan]").forEach(btn=>{
+  host.querySelectorAll("[data-delete-plan]").forEach(btn=>{
     btn.onclick=async()=>{
       try{
         await cloud.remove(cloud.cfg.tables.plans,btn.dataset.deletePlan);
@@ -449,6 +373,29 @@ async function renderPlansScreen(){
     };
   });
 }
+async function deletePlanAndRefresh(id){ await cloud.remove(cloud.cfg.tables.plans,id); renderPlansScreen(); }
+
+const SHOP_PREFIX = "EINKAUF // ";
+
+async function createShoppingList(name, inhalt){
+  const cleanName=String(name||"Einkaufsliste").replace(/^EINKAUF\s*\/\/\s*/i,"").trim() || "Einkaufsliste";
+  const payload={
+    name:`EINKAUF // ${cleanName}`,
+    inhalt:String(inhalt||"").trim(),
+    erstellt:new Date().toISOString(),
+    typ:"einkauf"
+  };
+  if(!payload.inhalt) throw new Error("Einkaufsliste ist leer.");
+  const row=await cloud.create(cloud.cfg.tables.plans,payload);
+  try{
+    const cached=JSON.parse(localStorage.getItem("iron_plans_cache")||"[]");
+    cached.unshift({...payload,$id:row?.$id||("local_"+Date.now())});
+    localStorage.setItem("iron_plans_cache",JSON.stringify(cached.slice(0,150)));
+  }catch{}
+  try{ await renderShoppingScreen(); }catch(e){ console.warn("Shopping render:",e); }
+  return row;
+}
+
 async function renderShoppingScreen(){
   const host=$("#shoppingList") || $("#shoppingLists") || $("#einkaufList") || $("#einkaufsliste");
   if(!host) return;
@@ -1642,6 +1589,3 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 window.createTask = createTask;
 window.createCalendarFromCommand = createCalendarFromCommand;
-
-window.renderTasksScreen = renderTasksScreen;
-window.renderPlansScreen = renderPlansScreen;

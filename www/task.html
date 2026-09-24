@@ -1,76 +1,33 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#02070b"><title>IRON // Tasks</title>
-<link rel="stylesheet" href="style.css?v=730">
-</head>
-<body class="v7 v7-tasks v73-tasks">
-<div class="grid"></div><div class="scanlines"></div>
-
+<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02070b"><title>IRON // Tasks</title><link rel="stylesheet" href="style.css?v=700"></head>
+<body class="v7 v7-tasks"><div class="grid"></div><div class="scanlines"></div>
 <header class="v7-header">
   <div class="v7-header-spacer"></div>
-  <a class="v7-logo" href="index.html"><span>I</span><span>R</span><i>O</i><span>N</span><small>SYSTEM ONLINE</small></a>
-  <div class="v7-clockbox"><small id="hudDate">--.--.----</small><b id="hudTime">--:--</b></div>
+  <a class="v7-logo" href="index.html" aria-label="IRON Home">
+    <span>I</span><span>R</span><i>O</i><span>N</span>
+    <small>TASK CONTROL</small>
+  </a>
+  <div class="v7-clockbox">
+    <small id="hudDate">--.--.----</small>
+    <b id="hudTime">--:--</b>
+  </div>
 </header>
 
-<main class="v7-main">
-<section class="v73-task-hero">
-  <div class="v73-task-left">
-    <article class="v7-panel v73-task-quote">
-      <p>„GROSSE ZIELE<br>ENTSTEHEN AUS<br>KLEINEN AUFGABEN.“</p><small>– IRON</small>
-    </article>
-    <article class="v7-panel v73-task-stats">
-      <div><span>GESAMT</span><b id="v7TaskTotal">0</b><small>Aufgaben</small></div>
-      <div><span>AKTIV</span><b id="v7TaskOpen">0</b><small>Offen</small></div>
-      <div><span>ERLEDIGT</span><b id="v7TaskDone">0</b><small>Diese Woche</small></div>
-    </article>
-  </div>
+<main class="v7-main"><section class="v7-subtitle">GROSSE ZIELE ENTSTEHEN AUS KLEINEN AUFGABEN.</section>
+<section class="v7-task-overview"><article class="v7-panel v7-quote"><span>„DISZIPLIN HEUTE.<br>FREIHEIT MORGEN.“</span><small>— IRON</small></article><div class="v7-task-ring"><div><span>AUFGABEN</span><b id="v7TaskProgress">0/0</b><strong id="v7TaskPercent">0%</strong></div></div><article class="v7-panel"><div class="v7-panel-title">STATUS</div><div class="v7-stat-three"><p><b id="v7TaskTotal">0</b><span>GESAMT</span></p><p><b id="v7TaskOpen">0</b><span>AKTIV</span></p><p><b id="v7TaskDone">0</b><span>ERLEDIGT</span></p></div></article></section>
 
-  <section class="v73-task-core">
-    <div class="v73-task-ring">
-      <div class="v73-task-ring-inner">
-        <span>AUFGABEN<br>HEUTE</span>
-        <b id="v7TaskProgress">0/0</b>
-        <strong id="v7TaskPercent">0%</strong>
-      </div>
-    </div>
-  </section>
-
-  <div class="v73-task-right">
-    <article class="v7-panel v73-reminders">
-      <div class="v7-panel-title">NÄCHSTE ERINNERUNGEN <span>MEHR ›</span></div>
-      <div id="v73NextReminders"><p class="muted">Keine Erinnerungen.</p></div>
-    </article>
-    <div class="v73-discipline">DISZIPLIN HEUTE.<br>FREIHEIT MORGEN.</div>
-  </div>
-</section>
-
-<section class="v7-tabbar v73-task-tabs">
-  <button class="active">◎ HEUTE <b id="v73TodayBadge">0</b></button>
-  <button>☆ WICHTIG <b id="v73ImportantBadge">0</b></button>
-  <button>✓ ERLEDIGT <b id="v73DoneBadge">0</b></button>
-</section>
-
-<section id="v7TaskQuickAdd" class="v7-panel v73-task-quickadd">
-  <div class="v7-panel-title">NEUE AUFGABE <span>IRON TASK CONTROL</span></div>
-  <div class="v73-task-add-grid">
-    <input id="v7TaskTextInput" placeholder="Neue Aufgabe eingeben ...">
+<section id="v7TaskQuickAdd" class="v7-panel v7-task-quickadd">
+  <div class="v7-panel-title">TASK + ERINNERUNG <span>ANDROID</span></div>
+  <input id="v7TaskTextInput" placeholder="Neue Aufgabe">
+  <div class="v7-form-two">
     <input id="v7TaskDateInput" type="date">
     <input id="v7TaskTimeInput" type="time">
-    <label class="v7-important-toggle"><input id="v7TaskImportantInput" type="checkbox"><span>WICHTIG</span></label>
-    <button id="v7TaskAddBtn" class="v7-primary-action">＋ HINZUFÜGEN</button>
   </div>
+  <label class="v7-important-toggle"><input id="v7TaskImportantInput" type="checkbox"><span>WICHTIGE AUFGABE</span></label>
+  <button id="v7TaskAddBtn" class="v7-primary-action">TASK SPEICHERN + ERINNERN</button>
 </section>
-
-<section class="v73-task-list-shell">
-  <div id="tasksList" class="screen-list v7-task-list v73-task-list"><p class="muted">Lade Aufgaben...</p></div>
-</section>
-
-<section class="v7-greeting compact v73-task-prompt">
-  <span>Was steht als Nächstes an?</span>
-  <p>Sag es mir oder tippe deine Aufgabe ...</p>
-</section>
+<section class="v7-tabbar"><button class="active">◎ HEUTE</button><button>☆ WICHTIG</button><button>✓ ERLEDIGT</button></section>
+<section class="v7-panel v7-list-shell"><div class="v7-panel-title">AUFGABEN <span>LIVE APPWRITE</span></div><div id="tasksList" class="screen-list v7-task-list"><p class="muted">Lade Aufgaben...</p></div></section>
+<section class="v7-greeting compact"><span>Was steht als Nächstes an?</span><p>Sag es mir oder tippe deine Aufgabe.</p></section>
 
 <section class="v7-assistant">
   <div id="response" class="v7-assistant-response">System bereit.</div>
@@ -84,33 +41,13 @@
   <b id="speechStatus" class="v7-speech-status">READY</b>
 </section>
 
-<section class="v7-quick-row">
-  <button data-command="Erstelle eine neue Aufgabe">＋ <span>Aufgabe hinzufügen</span></button>
-  <button data-command="Plane meine Aufgaben für heute">▣ <span>Heute planen</span></button>
-  <button data-command="Welche Aufgabe ist jetzt am wichtigsten?">◎ <span>Fokus-Modus</span></button>
-  <button onclick="document.getElementById('ironHamburger')?.click()">▦ <span>Mehr</span></button>
-</section>
+<section class="v7-quick-row"><button data-command="Erstelle eine neue Aufgabe">＋ <span>Aufgabe hinzufügen</span></button><button data-command="Plane meine Aufgaben für heute">▣ <span>Heute planen</span></button><button data-command="Welche Aufgabe ist jetzt am wichtigsten?">◎ <span>Fokus-Modus</span></button><button onclick="document.getElementById('ironHamburger')?.click()">▦ <span>Mehr</span></button></section>
 </main>
-
-<div id="v73TaskReminderModal" class="v73-reminder-modal" hidden>
-  <div class="v73-reminder-card">
-    <button id="v73ReminderClose" class="v73-reminder-close">×</button>
-    <h2>IRON TASK-ERINNERUNG</h2>
-    <p id="v73ReminderTaskName">Aufgabe</p>
-    <div class="v7-form-two">
-      <input id="v73ReminderDate" type="date">
-      <input id="v73ReminderTime" type="time">
-    </div>
-    <label class="v7-important-toggle"><input id="v73ReminderImportant" type="checkbox"><span>WICHTIGE ERINNERUNG</span></label>
-    <button id="v73ReminderSave" class="v7-primary-action">🔔 BENACHRICHTIGUNG EINSCHALTEN</button>
-    <button id="v73ReminderCancel" class="v73-danger-action">BENACHRICHTIGUNG AUSSCHALTEN</button>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
-<script src="iron-appwrite.js?v=730"></script>
-<script src="app.js?v=730"></script>
-<script src="mobile-bridge.js?v=730"></script>
-<script src="iron-menu.js?v=730"></script>
-<script src="iron-v7-ui.js?v=730"></script>
+<script src="iron-appwrite.js?v=700"></script>
+
+<script src="app.js?v=700"></script>
+<script src="mobile-bridge.js?v=700"></script>
+<script src="iron-menu.js?v=700"></script>
+<script src="iron-v7-ui.js?v=700"></script>
 </body></html>

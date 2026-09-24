@@ -1,28 +1,27 @@
-IRON Android V7.3 — Reference Layout Edition
+IRON Android V7.3 — SHARED IRON CLOUD
 
-HOME
-- Restored the supplied reference layout: four system meters, three-column
-  central AI HUD, news/weather/stocks row, greeting, command bar.
-- Removed the extra V7.2 shortcut row from HOME; calendar/tasks/images remain
-  available through the hamburger menu.
+Verbindung
+==========
+Die Android-App und der PC verwenden jetzt denselben IRON-Cloud-Konversationskanal:
 
-TASKS
-- Layout follows the supplied task mockup: quote/stat panel, circular progress,
-  next reminders, Heute/Wichtig/Erledigt sections and command bar.
-- EVERY existing Appwrite task now has a bell button.
-- Tap the bell -> choose date/time -> enable a local Android notification.
-- Tap an active bell -> reminder dialog also lets you turn it off.
-- Reminder settings are stored locally on the phone, so no Appwrite task schema
-  change is required.
+conversation_id = "main"
 
-PLANS
-- Layout follows the supplied plan mockup.
-- Three dedicated real plan departments:
-  1. Bildung / Lernen
-  2. Körper / Fitness
-  3. Ernährung
-- Existing Appwrite plans are categorized automatically from their name/content.
-- Nutrition/research shopping rows remain separate from normal plans.
+PC:
+source = "pc"
 
-Requires a new APK build.
-No Appwrite schema change is required for task reminders or the plan departments.
+Android:
+source = "android"
+
+Damit kann die Appwrite Function beide Geräte als denselben persönlichen IRON-Kontext behandeln,
+während weiterhin erkennbar bleibt, von welchem Gerät eine Nachricht kam.
+
+Unverändert:
+- Appwrite Project: 6a9ff5910019d4b95d45
+- Function Domain: https://starter-function-4j4o.fra.appwrite.run
+- Tasks / Pläne / Bilder bleiben Appwrite-basiert.
+- Der PC-Agent synchronisiert PC-Tasks/Pläne/Heartbeat in dieselbe Appwrite-Umgebung.
+
+APK bauen
+=========
+Dieses ZIP ist das Android-Projekt. Die vorhandene GitHub-Actions-Workflow-Datei
+.github/workflows/build-apk.yml kann daraus wieder die APK bauen.

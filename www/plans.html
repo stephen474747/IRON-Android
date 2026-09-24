@@ -1,110 +1,22 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#02070b"><title>IRON // Pläne</title>
-<link rel="stylesheet" href="style.css?v=730">
-</head>
-<body class="v7 v7-plans v73-plans">
-<div class="grid"></div><div class="scanlines"></div>
-
+<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02070b"><title>IRON // Pläne</title><link rel="stylesheet" href="style.css?v=700"></head>
+<body class="v7 v7-plans"><div class="grid"></div><div class="scanlines"></div>
 <header class="v7-header">
   <div class="v7-header-spacer"></div>
-  <a class="v7-logo" href="index.html"><span>I</span><span>R</span><i>O</i><span>N</span><small>PLÄNE</small></a>
-  <div class="v7-clockbox"><small id="hudDate">--.--.----</small><b id="hudTime">--:--</b></div>
+  <a class="v7-logo" href="index.html" aria-label="IRON Home">
+    <span>I</span><span>R</span><i>O</i><span>N</span>
+    <small>PLÄNE</small>
+  </a>
+  <div class="v7-clockbox">
+    <small id="hudDate">--.--.----</small>
+    <b id="hudTime">--:--</b>
+  </div>
 </header>
 
-<main class="v7-main">
-<section class="v7-subtitle">STRUKTUR HEUTE. EINE BESSERE ZUKUNFT MORGEN.</section>
-
-<section class="v73-week-row">
-  <div class="v73-week-label">WOCHE</div>
-  <div class="v7-week-strip" id="v7WeekStrip"></div>
-  <button class="v73-plan-view">▣ PLAN<br>ANSICHT ›</button>
-</section>
-
-<section class="v73-plan-hero">
-  <article class="v7-panel v73-goals">
-    <div class="v7-panel-title">ZIELE <span>MEHR ›</span></div>
-    <p><strong>◎</strong><span>LERNEN<small>BILDUNG & WISSEN</small></span><i style="--p:68%"></i></p>
-    <p><strong>◇</strong><span>FITNESS<small>KÖRPER & TRAINING</small></span><i style="--p:48%"></i></p>
-    <p><strong>◉</strong><span>ERNÄHRUNG<small>ESSEN & REZEPTE</small></span><i style="--p:72%"></i></p>
-    <p><strong>☆</strong><span>PERSÖNLICH<small>ALLTAG & ZIELE</small></span><i style="--p:54%"></i></p>
-  </article>
-
-  <section class="v73-plan-core">
-    <div class="v73-plan-wheel">
-      <div class="v7-orbit o1"></div><div class="v7-orbit o2"></div><div class="v7-orbit o3"></div>
-      <div class="v73-plan-center">▦<small>MEIN PLAN</small></div>
-      <span class="top">MEIN PLAN</span><span class="left">FOKUSSIEREN</span><span class="right">REALISIEREN</span><span class="bottom">WACHSEN</span>
-      <i class="v73-plan-segment s1">⌂</i><i class="v73-plan-segment s2">◇</i><i class="v73-plan-segment s3">◉</i><i class="v73-plan-segment s4">☆</i>
-    </div>
-  </section>
-
-  <article class="v7-panel v73-today">
-    <div class="v7-panel-title">HEUTE <span id="v73TodayDate"></span></div>
-    <div class="v7-timeline">
-      <p><b>08:00</b><span>Lernen<small>Bildung</small></span></p>
-      <p><b>12:30</b><span>Mittagessen<small>Ernährung</small></span></p>
-      <p><b>16:00</b><span>Training<small>Körper</small></span></p>
-      <p><b>19:00</b><span>Abendessen<small>Ernährung</small></span></p>
-      <p><b>20:00</b><span>Lesen<small>Persönlich</small></span></p>
-    </div>
-  </article>
-</section>
-
-<section class="v73-plan-departments">
-  <article class="v73-department education" data-plan-filter="education">
-    <header><span>LERNPLÄNE</span><button data-command="Erstelle mir einen Bildungs- oder Lernplan">MEHR ›</button></header>
-    <div class="v73-hologram">⌂</div>
-    <h3>Bildung & Lernen</h3>
-    <p>Schule, Kurse, Sprachen, Lernen und Wissen.</p>
-    <div class="v73-progress"><i style="--p:60%"></i><b>60%</b></div>
-    <footer><span><b id="v73EducationCount">0</b> Pläne</span><span>◎ Fokus</span><span>▣ Ziele</span></footer>
-  </article>
-
-  <article class="v73-department body" data-plan-filter="body">
-    <header><span>KÖRPERPLÄNE</span><button data-command="Erstelle mir einen Fitness- oder Körperplan">MEHR ›</button></header>
-    <div class="v73-hologram">◇</div>
-    <h3>Körper & Fitness</h3>
-    <p>Training, Fitness, Bewegung und Gesundheit.</p>
-    <div class="v73-progress"><i style="--p:45%"></i><b>45%</b></div>
-    <footer><span><b id="v73BodyCount">0</b> Pläne</span><span>◇ Aktiv</span><span>▥ Wochen</span></footer>
-  </article>
-
-  <article class="v73-department nutrition" data-plan-filter="nutrition">
-    <header><span>ERNÄHRUNGSPLÄNE</span><button data-command="Erstelle mir einen Ernährungsplan mit Rezepten">MEHR ›</button></header>
-    <div class="v73-hologram">◉</div>
-    <h3>Ernährung</h3>
-    <p>Mahlzeiten, Rezepte, Einkauf und Zubereitung.</p>
-    <div class="v73-progress"><i style="--p:70%"></i><b>70%</b></div>
-    <footer><span><b id="v73NutritionCount">0</b> Pläne</span><span>◉ Essen</span><span>□ Einkauf</span></footer>
-  </article>
-</section>
-
-<section class="v73-plan-data">
-  <article class="v7-panel">
-    <div class="v7-panel-title">BILDUNG / LERNEN <button data-command="Erstelle einen neuen Lernplan">＋ NEU</button></div>
-    <div id="educationPlans" class="v73-category-plans"><p class="muted">Lade Bildungspläne ...</p></div>
-  </article>
-  <article class="v7-panel">
-    <div class="v7-panel-title">KÖRPER / FITNESS <button data-command="Erstelle einen neuen Fitnessplan">＋ NEU</button></div>
-    <div id="bodyPlans" class="v73-category-plans"><p class="muted">Lade Körperpläne ...</p></div>
-  </article>
-  <article class="v7-panel">
-    <div class="v7-panel-title">ERNÄHRUNG <button data-command="Erstelle einen neuen Ernährungsplan">＋ NEU</button></div>
-    <div id="nutritionPlans" class="v73-category-plans"><p class="muted">Lade Ernährungspläne ...</p></div>
-  </article>
-  <div id="plansList" hidden></div>
-</section>
-
-<section class="v73-next-steps v7-panel">
-  <div class="v7-panel-title">NÄCHSTE SCHRITTE <span>MEHR ›</span></div>
-  <div class="v73-step"><i></i><b>10:00</b><span>Bildungsziel bearbeiten</span><small>LERNEN ›</small></div>
-  <div class="v73-step"><i></i><b>16:00</b><span>Körperplan fortsetzen</span><small>FITNESS ›</small></div>
-  <div class="v73-step"><i></i><b>19:00</b><span>Ernährungsplan ansehen</span><small>ERNÄHRUNG ›</small></div>
-</section>
-
+<main class="v7-main"><section class="v7-subtitle">STRUKTUR HEUTE. EIN BESSERES MORGEN.</section><section class="v7-week-strip" id="v7WeekStrip"></section>
+<section class="v7-plan-overview"><article class="v7-panel v7-goals"><div class="v7-panel-title">ZIELE</div><p><span>◎ LERNEN</span><i style="--p:68%"></i></p><p><span>◇ FITNESS</span><i style="--p:48%"></i></p><p><span>◉ ERNÄHRUNG</span><i style="--p:72%"></i></p><p><span>☆ PERSÖNLICH</span><i style="--p:54%"></i></p></article>
+<div class="v7-plan-ring"><div class="v7-orbit o1"></div><div class="v7-orbit o2"></div><div class="v7-orbit o3"></div><div class="v7-plan-core">▣<small>MEIN PLAN</small></div><span class="n">FOKUS</span><span class="e">REALISIEREN</span><span class="s">WACHSEN</span></div>
+<article class="v7-panel"><div class="v7-panel-title">HEUTE</div><div class="v7-timeline"><p><b>08:00</b><span>Lernen</span></p><p><b>12:30</b><span>Mittagessen</span></p><p><b>16:00</b><span>Fokus</span></p><p><b>19:00</b><span>Abend</span></p></div></article></section>
+<section class="v7-panel v7-list-shell"><div class="v7-panel-title">DEINE PLÄNE <span id="v7PlanCount">APPWRITE</span></div><div id="plansList" class="screen-list v7-plan-list"><p class="muted">Lade Pläne...</p></div></section>
 <section class="v7-greeting compact"><span>Bereit für deinen Plan.</span><p>Welche Ziele setzen wir heute?</p></section>
 
 <section class="v7-assistant">
@@ -113,24 +25,19 @@
   <div class="v7-commandbar">
     <span class="v7-keyboard">⌨</span>
     <input id="commandInput" placeholder="Nachricht an IRON ..." autocomplete="off">
-    <button id="voiceBtn" class="v7-mic">◉</button>
-    <button id="sendBtn" class="v7-send">➤</button>
+    <button id="voiceBtn" class="v7-mic" aria-label="Mit IRON sprechen">◉</button>
+    <button id="sendBtn" class="v7-send" aria-label="Senden">➤</button>
   </div>
   <b id="speechStatus" class="v7-speech-status">READY</b>
 </section>
 
-<section class="v7-quick-row">
-  <button data-command="Optimiere meinen aktuellen Plan">☆ <span>Plan optimieren</span></button>
-  <button data-command="Erstelle einen neuen Plan">▤ <span>Neue Aufgabe</span></button>
-  <button data-command="Passe meine Ziele an">◉ <span>Ziele anpassen</span></button>
-  <button onclick="document.getElementById('ironHamburger')?.click()">▦ <span>Mehr</span></button>
-</section>
+<section class="v7-quick-row"><button data-command="Optimiere meinen aktuellen Plan">☆ <span>Plan optimieren</span></button><button data-command="Erstelle einen neuen Plan">▤ <span>Neuer Plan</span></button><button data-command="Passe meine Ziele an">◉ <span>Ziele anpassen</span></button><button onclick="document.getElementById('ironHamburger')?.click()">▦ <span>Mehr</span></button></section>
 </main>
-
 <script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
-<script src="iron-appwrite.js?v=730"></script>
-<script src="app.js?v=730"></script>
-<script src="mobile-bridge.js?v=730"></script>
-<script src="iron-menu.js?v=730"></script>
-<script src="iron-v7-ui.js?v=730"></script>
+<script src="iron-appwrite.js?v=700"></script>
+
+<script src="app.js?v=700"></script>
+<script src="mobile-bridge.js?v=700"></script>
+<script src="iron-menu.js?v=700"></script>
+<script src="iron-v7-ui.js?v=700"></script>
 </body></html>

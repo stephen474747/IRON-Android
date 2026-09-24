@@ -1,4 +1,4 @@
-console.log("[IRON] Android V6 Core Integration geladen");
+console.log("[IRON] Android V7.5 Auto-SMS Relay geladen");
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -16,6 +16,7 @@ const state = {
 function log(...args){ console.log('[IRON Mobile]', ...args); }
 
 const CLOUD_BASE = 'https://starter-function-4j4o.fra.appwrite.run';
+const IRON_SHARED_CONVERSATION_ID = 'main';
 let activeAudio = null;
 let conversationMode = false;
 let conversationBusy = false;
@@ -151,15 +152,6 @@ async function scheduleNotification({title='IRON TASK', body='Task-Erinnerung', 
 
   return { id: notificationId, at: when.toISOString() };
 }
-
-
-async function cancelNotification(id){
-  const notificationId=Number(id);
-  if(!Number.isFinite(notificationId)) return false;
-  await LocalNotifications.cancel({notifications:[{id:notificationId}]});
-  return true;
-}
-
 
 async function listenOnce(){
   let p = await SpeechRecognition.checkPermissions();
@@ -334,8 +326,259 @@ async function cloudSelfTest(){
 }
 
 
+
+let pendingSmsDraft = null;
+let smsRelayPollBusy = false;
+
+function smsDefaultSlot(){
+  const n=Number(localStorage.getItem('iron_sms_sim_slot')||'1');
+  return n===2 ? 2 : 1;
+}
+function setSmsDefaultSlot(slot){
+  const n=Number(slot)===2 ? 2 : 1;
+  localStorage.setItem('iron_sms_sim_slot',String(n));
+  return n;
+}
+
+async function listSmsSims(){
+  if(!state.native) return [];
+  const result=await IronPhone.getSims();
+  return Array.isArray(result?.sims) ? result.sims : [];
+}
+
+async function sendSms(number,message,simSlot=smsDefaultSlot(),senderNumber=""){
+  if(!state.native) throw new Error('SMS-Versand ist nur in der Android-App verfügbar.');
+  const cleaned=String(number||'').replace(/[^\d+]/g,'');
+  const body=String(message||'').trim();
+  if(!cleaned) throw new Error('Keine Zielnummer angegeben.');
+  if(!body) throw new Error('SMS-Text ist leer.');
+  return IronPhone.sendSms({
+    number:cleaned,
+    message:body,
+    simSlot:Number(simSlot)===2?2:1,
+    senderNumber:String(senderNumber||"")
+  });
+}
+
+function parseSmsVoice(text){
+  const raw=String(text||'').trim();
+  if(!/\b(sms|textnachricht|kurznachricht)\b/i.test(raw)) return null;
+
+  const simMatch=raw.match(/\bsim\s*([12])\b/i);
+  const numberMatch=raw.match(/(\+?\d[\d\s()/-]{5,}\d)/);
+  if(!numberMatch) return {error:'Keine Zielnummer erkannt.'};
+
+  const number=numberMatch[1].replace(/[^\d+]/g,'');
+  let message=raw.slice(numberMatch.index+numberMatch[0].length).trim().replace(/^[,.:;\-\s]+/,'');
+  message=message.replace(/^(?:mit\s+dem\s+text|mit\s+text|nachricht|text|dass|mit)\s*[:,-]?\s*/i,'').trim();
+  message=message.replace(/\s+(?:über|ueber|mit)\s+sim\s*[12]\s*$/i,'').trim();
+
+  if(!message) return {error:'Kein SMS-Text erkannt.'};
+  return {
+    number,
+    message,
+    simSlot:simMatch?Number(simMatch[1]):smsDefaultSlot()
+  };
+}
+
+async function registerSmsRelay(){
+  if(!state.native || !window.IRONCloud) return false;
+  try{
+    const user=await window.IRONCloud.currentUser();
+    if(!user?.$id) return false;
+
+    const lastUser=localStorage.getItem('iron_sms_relay_user')||'';
+    const lastAt=Number(localStorage.getItem('iron_sms_relay_at')||'0');
+    if(lastUser===user.$id && Date.now()-lastAt < 6*60*60*1000) return true;
+
+    await window.IRONCloud.create(window.IRONCloud.cfg.tables.pcCommands,{
+      command:`SMS_REGISTER::${user.$id}`,
+      status:'pending',
+      created_at:new Date().toISOString(),
+      result:''
+    });
+    localStorage.setItem('iron_sms_relay_user',user.$id);
+    localStorage.setItem('iron_sms_relay_at',String(Date.now()));
+    console.log('[IRON SMS] Relay registration queued.');
+    return true;
+  }catch(e){
+    console.warn('[IRON SMS] Relay registration:',e);
+    return false;
+  }
+}
+
+function decodeBase64UrlUtf8(value){
+  let s=String(value||'').replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length%4) s+='=';
+  const bin=atob(s);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+async function pollSmsRelay(){
+  if(!state.native || smsRelayPollBusy || !window.IRONCloud) return;
+  smsRelayPollBusy=true;
+  try{
+    const user=await window.IRONCloud.currentUser().catch(()=>null);
+    if(!user) return;
+
+    const rows=await window.IRONCloud.list(
+      window.IRONCloud.cfg.tables.pcCommands,
+      [window.IRONCloud.Query.orderDesc('$createdAt'),window.IRONCloud.Query.limit(50)]
+    );
+
+    const jobs=(rows||[]).filter(r=>{
+      const c=String(r?.command||'');
+      return r?.status==='pending' && (c.startsWith('SMS::') || c.startsWith('SMSV2::'));
+    });
+
+    for(const row of jobs){
+      const commandText=String(row.command||'');
+      const parts=commandText.split('::');
+      let simSlot=1, senderNumber='', number='', encoded='';
+
+      if(commandText.startsWith('SMSV2::')){
+        if(parts.length<5) continue;
+        simSlot=Number(parts[1])===2?2:1;
+        senderNumber=parts[2]||'';
+        number=parts[3]||'';
+        encoded=parts.slice(4).join('::');
+      }else{
+        if(parts.length<4) continue;
+        simSlot=Number(parts[1])===2?2:1;
+        number=parts[2]||'';
+        encoded=parts.slice(3).join('::');
+      }
+
+      // Claim first. If we cannot update the row, do NOT send and risk duplicates.
+      await window.IRONCloud.update(
+        window.IRONCloud.cfg.tables.pcCommands,row.$id,
+        {status:'running',result:'Android übernimmt SMS'}
+      );
+
+      try{
+        const message=decodeBase64UrlUtf8(encoded);
+        const result=await sendSms(number,message,simSlot,senderNumber);
+        await window.IRONCloud.update(
+          window.IRONCloud.cfg.tables.pcCommands,row.$id,
+          {status:'done',result:`SMS gesendet über SIM ${result?.simSlot||simSlot}`}
+        );
+        window.show?.(`SMS über SIM ${result?.simSlot||simSlot} gesendet.`);
+        await speak(`SMS über SIM ${result?.simSlot||simSlot} gesendet.`);
+      }catch(e){
+        await window.IRONCloud.update(
+          window.IRONCloud.cfg.tables.pcCommands,row.$id,
+          {status:'error',result:String(e?.message||e).slice(0,500)}
+        ).catch(()=>{});
+        window.show?.('SMS-Fehler: '+(e?.message||e));
+      }
+    }
+  }catch(e){
+    // Normal while not logged in / no visible jobs.
+    console.warn('[IRON SMS] Queue poll:',e);
+  }finally{
+    smsRelayPollBusy=false;
+  }
+}
+
+function installSmsVoiceCommands(){
+  const original=window.command;
+  if(typeof original!=='function') return;
+
+  window.command=async function(text){
+    const raw=String(text||'').trim();
+    const low=raw.toLowerCase();
+
+    const setSim=low.match(/(?:benutze|verwende|nimm|standard).*sim\s*([12]).*sms|sms.*(?:benutze|verwende|nimm|standard).*sim\s*([12])/i);
+    if(setSim){
+      const slot=Number(setSim[1]||setSim[2])===2?2:1;
+      setSmsDefaultSlot(slot);
+      const answer=`Für SMS verwende ich standardmäßig SIM ${slot}.`;
+      window.show?.(answer); await speak(answer); return;
+    }
+
+    if(pendingSmsDraft){
+      if(/^(?:ja|jap|jawohl|okay|ok|senden|schick|abschicken)\b/i.test(low)){
+        const draft=pendingSmsDraft; pendingSmsDraft=null;
+        try{
+          const result=await sendSms(draft.number,draft.message,draft.simSlot);
+          const answer=`SMS über SIM ${result?.simSlot||draft.simSlot} gesendet.`;
+          window.show?.(answer); await speak(answer);
+        }catch(e){
+          window.show?.('SMS-Fehler: '+(e?.message||e));
+          await speak('Die SMS konnte nicht gesendet werden.');
+        }
+        return;
+      }
+      if(/^(?:nein|nee|abbrechen|nicht senden|verwerfen)\b/i.test(low)){
+        pendingSmsDraft=null;
+        window.show?.('SMS verworfen.'); await speak('SMS verworfen.'); return;
+      }
+    }
+
+    const parsed=parseSmsVoice(raw);
+    if(parsed){
+      if(parsed.error){
+        window.show?.(parsed.error); await speak(parsed.error); return;
+      }
+      pendingSmsDraft=parsed;
+      const answer=`SMS über SIM ${parsed.simSlot} vorbereitet. Soll ich sie senden?`;
+      window.show?.(answer); await speak(answer); return;
+    }
+
+    return original(text);
+  };
+}
+
+async function installSmsHudControls(){
+  if(!state.native) return;
+  const center=document.querySelector('.hud-center');
+  if(!center || document.getElementById('ironSmsBox')) return;
+
+  const box=document.createElement('div');
+  box.id='ironSmsBox';
+  box.className='iron-phone-box';
+  box.innerHTML=`
+    <div style="margin-top:8px;font-size:10px;letter-spacing:1px">SMS RELAY</div>
+    <select id="ironSmsSim"><option value="1">SIM 1</option><option value="2">SIM 2</option></select>
+    <input id="ironSmsNumber" inputmode="tel" placeholder="SMS Zielnummer">
+    <input id="ironSmsText" placeholder="SMS Text">
+    <button id="ironSmsSendBtn">SMS SENDEN</button>
+  `;
+  center.appendChild(box);
+
+  const select=document.getElementById('ironSmsSim');
+  select.value=String(smsDefaultSlot());
+  select.onchange=()=>setSmsDefaultSlot(Number(select.value));
+
+  try{
+    const sims=await listSmsSims();
+    if(sims.length){
+      select.innerHTML=sims.map(s=>
+        `<option value="${Number(s.slot)||1}">SIM ${Number(s.slot)||1} · ${String(s.carrier||s.displayName||'')}</option>`
+      ).join('');
+      select.value=String(smsDefaultSlot());
+    }
+  }catch(e){
+    console.warn('[IRON SMS] SIM list:',e);
+  }
+
+  document.getElementById('ironSmsSendBtn').onclick=async()=>{
+    const number=document.getElementById('ironSmsNumber').value;
+    const message=document.getElementById('ironSmsText').value;
+    try{
+      const result=await sendSms(number,message,Number(select.value));
+      window.show?.(`SMS über SIM ${result?.simSlot||select.value} gesendet.`);
+    }catch(e){
+      window.show?.('SMS-Fehler: '+(e?.message||e));
+    }
+  };
+}
+
+
 async function callContactByName(name){
-  if(!isNative) throw new Error('Kontaktanrufe sind nur in der Android-App verfügbar.');
+  if(!state.native) throw new Error('Kontaktanrufe sind nur in der Android-App verfügbar.');
   const IronPhone = registerPlugin('IronPhone');
 const IronCalendar = registerPlugin('IronCalendar');
   const found = await IronPhone.lookupContact({ name:String(name||'').trim() });
@@ -469,7 +712,11 @@ async function init(){
   await requestNotifications().catch(()=>{});
   cloudSelfTest().catch(()=>{});
   setTimeout(installContactVoiceCommands, 500);
-  App.addListener('appStateChange',({isActive})=>{ if(isActive) window.dispatchEvent(new Event('iron-app-resume')); });
+  setTimeout(installSmsVoiceCommands, 800);
+  setTimeout(()=>installSmsHudControls().catch(()=>{}), 1000);
+  setTimeout(()=>registerSmsRelay().catch(()=>{}), 1800);
+  setInterval(()=>pollSmsRelay().catch(()=>{}), 10000);
+  App.addListener('appStateChange',({isActive})=>{ if(isActive){ window.dispatchEvent(new Event('iron-app-resume')); registerSmsRelay().catch(()=>{}); pollSmsRelay().catch(()=>{}); } });
   LocalNotifications.addListener('localNotificationActionPerformed', async (action)=>{
     const n=action?.notification;
     const body=n?.body || n?.extra?.body;
@@ -488,10 +735,12 @@ window.IRONMobile = {
   speak,
   listenOnce,
   scheduleNotification,
-  cancelNotification,
   requestNotifications,
   pickHudImage,
   callNumber,
+  sendSms,
+  listSmsSims,
+  pollSmsRelay,
   cloudSelfTest,
   callContactByName,
   createCalendarEvent,
