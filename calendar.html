@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02070b">
+<title>IRON // Kalender</title>
+<link rel="stylesheet" href="style.css?v=710">
+</head>
+<body class="v7 v7-calendar">
+<div class="grid"></div><div class="scanlines"></div>
+
+<header class="v7-header">
+  <div class="v7-header-spacer"></div>
+  <a class="v7-logo" href="index.html"><span>I</span><span>R</span><i>O</i><span>N</span><small>KALENDER</small></a>
+  <div class="v7-clockbox"><small id="hudDate">--.--.----</small><b id="hudTime">--:--</b></div>
+</header>
+
+<main class="v7-main">
+<section class="v7-subtitle">ZEIT ORGANISIEREN. TERMINE ERKENNEN. RECHTZEITIG ERINNERN.</section>
+
+<section class="v7-calendar-hero">
+  <article class="v7-panel v7-calendar-month">
+    <div class="v7-panel-title"><span id="calendarMonthTitle">MONAT</span><button id="calendarTodayBtn">HEUTE</button></div>
+    <div id="calendarMonthGrid" class="v7-month-grid"></div>
+  </article>
+
+  <article class="v7-panel v7-calendar-create">
+    <div class="v7-panel-title">NEUER TERMIN <span>IRON</span></div>
+    <input id="calendarTitleInput" placeholder="Titel, z. B. Zahnarzt">
+    <div class="v7-form-two">
+      <input id="calendarDateInput" type="date">
+      <input id="calendarTimeInput" type="time">
+    </div>
+    <div class="v7-form-two">
+      <select id="calendarDurationInput">
+        <option value="30">30 Min</option>
+        <option value="60" selected>1 Stunde</option>
+        <option value="90">1,5 Stunden</option>
+        <option value="120">2 Stunden</option>
+      </select>
+      <select id="calendarReminderInput">
+        <option value="5">5 Min vorher</option>
+        <option value="15" selected>15 Min vorher</option>
+        <option value="30">30 Min vorher</option>
+        <option value="60">1 Stunde vorher</option>
+      </select>
+    </div>
+    <input id="calendarLocationInput" placeholder="Ort (optional)">
+    <textarea id="calendarDescriptionInput" placeholder="Beschreibung (optional)"></textarea>
+    <label class="v7-important-toggle"><input id="calendarImportantInput" type="checkbox"><span>WICHTIG – zusätzliche IRON-Erinnerungen</span></label>
+    <button id="calendarCreateBtn" class="v7-primary-action">TERMIN EINTRAGEN</button>
+  </article>
+</section>
+
+<section class="v7-calendar-stats">
+  <article class="v7-panel"><span>HEUTE</span><b id="calendarTodayCount">0</b><small>TERMINE</small></article>
+  <article class="v7-panel"><span>NÄCHSTE 7 TAGE</span><b id="calendarWeekCount">0</b><small>TERMINE</small></article>
+  <article class="v7-panel"><span>ERINNERUNGEN</span><b>IRON</b><small>AKTIV</small></article>
+</section>
+
+<section class="v7-panel v7-agenda-shell">
+  <div class="v7-panel-title">NÄCHSTE TERMINE <button id="calendarRefreshBtn">↻ AKTUALISIEREN</button></div>
+  <div id="calendarAgenda" class="v7-calendar-agenda"><p>Lade Android-Kalender...</p></div>
+</section>
+
+<section class="v7-greeting compact"><span>Was soll ich eintragen?</span><p>Zum Beispiel: „IRON, mach morgen um 15 Uhr einen wichtigen Termin Zahnarzt.“</p></section>
+
+<section class="v7-assistant">
+  <div id="response" class="v7-assistant-response">System bereit.</div>
+  <div id="answerText" class="v7-answer-text">Antworten von IRON erscheinen hier als Text.</div>
+  <div class="v7-commandbar">
+    <span class="v7-keyboard">⌨</span>
+    <input id="commandInput" placeholder="Termin per Sprache oder Text ..." autocomplete="off">
+    <button id="voiceBtn" class="v7-mic">◉</button>
+    <button id="sendBtn" class="v7-send">➤</button>
+  </div>
+  <b id="speechStatus" class="v7-speech-status">READY</b>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=710"></script>
+<script src="app.js?v=710"></script>
+<script src="mobile-bridge.js?v=710"></script>
+<script src="iron-menu.js?v=710"></script>
+<script src="iron-v7-ui.js?v=710"></script>
+</body>
+</html>

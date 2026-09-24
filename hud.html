@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="de"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02070b"><title>IRON // HUD</title><link rel="stylesheet" href="style.css?v=700"></head>
+<body class="v7 v7-hud"><div class="grid"></div><div class="scanlines"></div>
+
+<header class="v7-header">
+  <div class="v7-header-spacer"></div>
+  <a class="v7-logo" href="index.html" aria-label="IRON Home">
+    <span>I</span><span>R</span><i>O</i><span>N</span>
+    <small>HUD SYSTEM</small>
+  </a>
+  <div class="v7-clockbox">
+    <small id="hudDate">--.--.----</small>
+    <b id="hudTime">--:--</b>
+  </div>
+</header>
+
+<main class="v7-main"><section class="v7-subtitle">LIVE COMMAND INTERFACE // CLOUD + MEMORY + VOICE</section>
+<section class="v7-core-grid v7-core-grid-hud">
+<aside class="v7-stack">
+<article class="v7-panel"><div class="v7-panel-title">WETTER</div><div class="v7-weather-mini"><span>◒</span><b id="v7WeatherTemp">--°C</b></div><small id="v7WeatherText">Luxemburg</small><button id="v7WeatherBtn">WETTER ABFRAGEN</button></article>
+<article class="v7-panel"><div class="v7-panel-title">DATA CORE</div><div class="v7-data-row"><span>OFFENE TASKS</span><b id="hudTaskCount">0</b></div><div class="v7-data-row"><span>PLÄNE</span><b id="hudPlanCount">0</b></div><div class="v7-data-row"><span>EINKAUF</span><b id="hudShoppingCount">0</b></div></article>
+</aside>
+<section class="v7-reactor-zone"><div class="v7-reactor-label top">ZUHÖREN</div><div class="v7-reactor mega"><div class="v7-orbit o1"></div><div class="v7-orbit o2"></div><div class="v7-orbit o3"></div><div class="v7-orbit o4"></div><div class="v7-reactor-face"><span>I</span><small>IRON CORE</small></div></div><div class="v7-reactor-label left">DENKEN</div><div class="v7-reactor-label right">ANALYSIEREN</div><div class="v7-reactor-label bottom">ANTWORTEN</div><div id="voiceStatus" class="v7-core-status">STANDBY</div></section>
+<aside class="v7-stack">
+<article class="v7-panel"><div class="v7-panel-title">SYSTEMSTATUS</div><div class="v7-data-row"><span>CLOUD</span><b id="hudCloud">OFFLINE</b></div><div class="v7-data-row"><span>PC AGENT</span><b id="hudPC">OFFLINE</b></div><div class="v7-data-row"><span>AUDIO</span><b>READY</b></div><div class="v7-data-row"><span>NETZ</span><b>ACTIVE</b></div></article>
+<article class="v7-panel"><div class="v7-panel-title">VISION</div><div class="hud-image-stage" id="hudImageStage"><img id="hudImage" alt="IRON Vision Bild"><div id="hudImageEmpty">NO IMAGE</div></div><div class="v7-button-row"><button id="uploadBtn">BILD</button><button id="clearImageBtn">LÖSCHEN</button></div><input id="imageInput" type="file" accept="image/*" hidden></article>
+</aside></section>
+<section class="v7-dashboard-grid">
+<article class="v7-panel"><div class="v7-panel-title">NACHRICHTEN / GMAIL</div><div id="hudNews" class="hud-live-list"><p>News bereit.</p></div><div class="v7-button-row"><button id="newsBtn">LIVE NEWS</button><button id="gmailBtn">GMAIL</button></div><small id="gmailState">GMAIL: NICHT VERBUNDEN</small></article>
+<article class="v7-panel"><div class="v7-panel-title">AKTIEN / FINANZEN</div><div id="hudStocks" class="hud-live-list"><p>Kurse bereit.</p></div><button id="stocksBtn">LIVE KURSE</button></article>
+<article class="v7-panel"><div class="v7-panel-title">IRON STATUS</div><p class="v7-status-copy">Sprache, Cloud, Memory und lokale Android-Funktionen verbunden.</p><button onclick="location.href='diagnostics.html'">DIAGNOSE</button></article>
+</section>
+
+<section class="v7-assistant">
+  <div id="response" class="v7-assistant-response">System bereit.</div>
+  <div id="answerText" class="v7-answer-text">Antworten von IRON erscheinen hier als Text.</div>
+  <div class="v7-commandbar">
+    <span class="v7-keyboard">⌨</span>
+    <input id="commandInput" placeholder="IRON Befehl ..." autocomplete="off">
+    <button id="voiceBtn" class="v7-mic" aria-label="Mit IRON sprechen">◉</button>
+    <button id="sendBtn" class="v7-send" aria-label="Senden">➤</button>
+  </div>
+  <b id="speechStatus" class="v7-speech-status">READY</b>
+</section>
+
+</main>
+<div class="iron-modal" id="gmailModal" hidden><div class="iron-modal-card"><button class="iron-modal-close" id="gmailClose">×</button><h2>GMAIL VERBINDUNG</h2><p>Google OAuth verbindet deinen Gmail-Posteingang sicher mit IRON.</p></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=700"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="app.js?v=700"></script>
+<script src="mobile-bridge.js?v=700"></script>
+<script src="iron-menu.js?v=700"></script>
+<script src="iron-v7-ui.js?v=700"></script>
+</body></html>

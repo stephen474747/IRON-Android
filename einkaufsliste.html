@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02070b"><title>IRON // Einkaufsliste</title><link rel="stylesheet" href="style.css?v=700"></head>
+<body class="v7 v7-shopping"><div class="grid"></div><div class="scanlines"></div>
+<header class="v7-header">
+  <div class="v7-header-spacer"></div>
+  <a class="v7-logo" href="index.html" aria-label="IRON Home">
+    <span>I</span><span>R</span><i>O</i><span>N</span>
+    <small>SYSTEM ONLINE</small>
+  </a>
+  <div class="v7-clockbox">
+    <small id="hudDate">--.--.----</small>
+    <b id="hudTime">--:--</b>
+  </div>
+</header>
+
+<main class="v7-main"><section class="v7-shopping-head"><article class="v7-panel v7-shopping-title"><strong>🛒</strong><div><h1>EINKAUFSLISTE</h1><p>ALLES, WAS DU BRAUCHST. INTELLIGENT ORGANISIERT.</p></div></article><article class="v7-panel v7-shop-stats"><span>ARTIKEL GESAMT</span><b id="v7ShopItems">0</b><i></i><span><strong id="v7ShopLists">0</strong> LISTEN</span></article></section>
+<section class="v7-tabbar three"><button class="active">◉ ZUTATEN</button><button>♨ REZEPTE</button><button>▣ PLANEN</button></section>
+<section class="v7-panel v7-list-shell"><div class="v7-panel-title">APPWRITE EINKAUFSLISTEN <span>SYNC</span></div><div id="shoppingList" class="screen-list v7-shopping-list"><p class="muted">Lade Einkaufsliste...</p></div></section>
+<section class="v7-greeting compact"><span>Bereit zum Einkaufen.</span><p>Soll ich dir noch etwas hinzufügen?</p></section>
+
+<section class="v7-assistant">
+  <div id="response" class="v7-assistant-response">System bereit.</div>
+  <div id="answerText" class="v7-answer-text">Antworten von IRON erscheinen hier als Text.</div>
+  <div class="v7-commandbar">
+    <span class="v7-keyboard">⌨</span>
+    <input id="commandInput" placeholder="Sag mir, was ich hinzufügen soll ..." autocomplete="off">
+    <button id="voiceBtn" class="v7-mic" aria-label="Mit IRON sprechen">◉</button>
+    <button id="sendBtn" class="v7-send" aria-label="Senden">➤</button>
+  </div>
+  <b id="speechStatus" class="v7-speech-status">READY</b>
+</section>
+
+<section class="v7-quick-row"><button data-command="Erstelle eine Einkaufsliste">＋ <span>Schnell hinzufügen</span></button><button data-command="Zeige mir passende Rezepte">♨ <span>Rezepte</span></button><button data-command="Plane meine Gerichte für diese Woche">▣ <span>Woche planen</span></button><button onclick="document.getElementById('ironHamburger')?.click()">▦ <span>Mehr</span></button></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=700"></script>
+
+<script src="app.js?v=700"></script>
+<script src="mobile-bridge.js?v=700"></script>
+<script src="iron-menu.js?v=700"></script>
+<script src="iron-v7-ui.js?v=700"></script>
+</body></html>
