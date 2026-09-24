@@ -1,4 +1,4 @@
-console.log("[IRON] Android V7.5 Auto-SMS Relay geladen");
+console.log("[IRON] Android V7.6 Voice Core + Ideen geladen");
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -199,6 +199,35 @@ async function callNumber(number, direct=true){
     return IronPhone.call({ number: cleaned });
   }
   return IronPhone.dial({ number: cleaned });
+}
+
+
+function installHomeCoreConversation(){
+  const reactor=document.querySelector('.v7-reactor');
+  if(!reactor || reactor.dataset.ironTalkInstalled==='1') return;
+  reactor.dataset.ironTalkInstalled='1';
+  reactor.setAttribute('role','button');
+  reactor.setAttribute('tabindex','0');
+  reactor.setAttribute('aria-label','Mit IRON sprechen');
+  const update=(on)=>{
+    reactor.classList.toggle('voice-live',on);
+    const st=document.getElementById('voiceStatus');
+    if(st) st.textContent=on?'LISTENING':'STANDBY';
+  };
+  const toggle=async()=>{
+    if(conversationMode){
+      conversationMode=false;
+      await stopConversation().catch(()=>{});
+      update(false);
+      window.show?.('Sprachgespräch beendet.');
+    }else{
+      update(true);
+      window.show?.('IRON hört zu. Tippe den Kern erneut, um das Gespräch zu beenden.');
+      startConversation();
+    }
+  };
+  reactor.addEventListener('click',toggle);
+  reactor.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
 }
 
 function installHudControls(){
@@ -727,6 +756,7 @@ async function init(){
 
 
   installHudControls();
+  installHomeCoreConversation();
   installTaskReminderUI();
 }
 
