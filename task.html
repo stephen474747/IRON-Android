@@ -1,53 +1,26 @@
-<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02070b"><title>IRON // Tasks</title><link rel="stylesheet" href="style.css?v=700"></head>
-<body class="v7 v7-tasks"><div class="grid"></div><div class="scanlines"></div>
-<header class="v7-header">
-  <div class="v7-header-spacer"></div>
-  <a class="v7-logo" href="index.html" aria-label="IRON Home">
-    <span>I</span><span>R</span><i>O</i><span>N</span>
-    <small>TASK CONTROL</small>
-  </a>
-  <div class="v7-clockbox">
-    <small id="hudDate">--.--.----</small>
-    <b id="hudTime">--:--</b>
-  </div>
-</header>
-
-<main class="v7-main"><section class="v7-subtitle">GROSSE ZIELE ENTSTEHEN AUS KLEINEN AUFGABEN.</section>
-<section class="v7-task-overview"><article class="v7-panel v7-quote"><span>„DISZIPLIN HEUTE.<br>FREIHEIT MORGEN.“</span><small>— IRON</small></article><div class="v7-task-ring"><div><span>AUFGABEN</span><b id="v7TaskProgress">0/0</b><strong id="v7TaskPercent">0%</strong></div></div><article class="v7-panel"><div class="v7-panel-title">STATUS</div><div class="v7-stat-three"><p><b id="v7TaskTotal">0</b><span>GESAMT</span></p><p><b id="v7TaskOpen">0</b><span>AKTIV</span></p><p><b id="v7TaskDone">0</b><span>ERLEDIGT</span></p></div></article></section>
-
-<section id="v7TaskQuickAdd" class="v7-panel v7-task-quickadd">
-  <div class="v7-panel-title">TASK + ERINNERUNG <span>ANDROID</span></div>
-  <input id="v7TaskTextInput" placeholder="Neue Aufgabe">
-  <div class="v7-form-two">
-    <input id="v7TaskDateInput" type="date">
-    <input id="v7TaskTimeInput" type="time">
-  </div>
-  <label class="v7-important-toggle"><input id="v7TaskImportantInput" type="checkbox"><span>WICHTIGE AUFGABE</span></label>
-  <button id="v7TaskAddBtn" class="v7-primary-action">TASK SPEICHERN + ERINNERN</button>
-</section>
-<section class="v7-tabbar"><button class="active">◎ HEUTE</button><button>☆ WICHTIG</button><button>✓ ERLEDIGT</button></section>
-<section class="v7-panel v7-list-shell"><div class="v7-panel-title">AUFGABEN <span>LIVE APPWRITE</span></div><div id="tasksList" class="screen-list v7-task-list"><p class="muted">Lade Aufgaben...</p></div></section>
-<section class="v7-greeting compact"><span>Was steht als Nächstes an?</span><p>Sag es mir oder tippe deine Aufgabe.</p></section>
-
-<section class="v7-assistant">
-  <div id="response" class="v7-assistant-response">System bereit.</div>
-  <div id="answerText" class="v7-answer-text">Antworten von IRON erscheinen hier als Text.</div>
-  <div class="v7-commandbar">
-    <span class="v7-keyboard">⌨</span>
-    <input id="commandInput" placeholder="Neue Aufgabe eingeben ..." autocomplete="off">
-    <button id="voiceBtn" class="v7-mic" aria-label="Mit IRON sprechen">◉</button>
-    <button id="sendBtn" class="v7-send" aria-label="Senden">➤</button>
-  </div>
-  <b id="speechStatus" class="v7-speech-status">READY</b>
-</section>
-
-<section class="v7-quick-row"><button data-command="Erstelle eine neue Aufgabe">＋ <span>Aufgabe hinzufügen</span></button><button data-command="Plane meine Aufgaben für heute">▣ <span>Heute planen</span></button><button data-command="Welche Aufgabe ist jetzt am wichtigsten?">◎ <span>Fokus-Modus</span></button><button onclick="document.getElementById('ironHamburger')?.click()">▦ <span>Mehr</span></button></section>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<title>IRON // Tasks</title>
+<link rel="stylesheet" href="style.css?v=620">
+</head>
+<body>
+<div class="grid"></div><div class="scanlines"></div>
+<header class="topbar"><a class="brand" href="index.html"><span class="mark">I</span><div><b>IRON</b><small>PERSONAL SYSTEM</small></div></a><div class="status"><i></i> ONLINE</div></header>
+<main class="page-main">
+<section class="page-heading"><div class="eyebrow">IRON CORE // TASKS</div><h1>YOUR<br><span>TASKS.</span></h1><p>Alle von IRON erkannten Aufgaben.</p></section>
+<section class="panel-section"><div class="title">TASKS <i></i></div><div id="tasksList" class="screen-list"><p class="muted">Lade Aufgaben...</p></div></section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
-<script src="iron-appwrite.js?v=700"></script>
 
-<script src="app.js?v=700"></script>
-<script src="mobile-bridge.js?v=700"></script>
-<script src="iron-menu.js?v=700"></script>
-<script src="iron-v7-ui.js?v=700"></script>
-</body></html>
+
+<script>document.addEventListener('DOMContentLoaded', () => { if (typeof renderTasksScreen === 'function') renderTasksScreen(); });</script>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=620"></script>
+<script src="app.js?v=620"></script>
+<script src="mobile-bridge.js?v=620"></script>
+<script src="iron-menu.js?v=620"></script>
+</body>
+</html>

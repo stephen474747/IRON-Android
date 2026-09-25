@@ -1,41 +1,52 @@
-<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02070b"><title>IRON // Bildarchiv</title><link rel="stylesheet" href="style.css?v=700"></head>
-<body class="v7 v7-photos"><div class="grid"></div><div class="scanlines"></div>
-<header class="v7-header">
-  <div class="v7-header-spacer"></div>
-  <a class="v7-logo" href="index.html" aria-label="IRON Home">
-    <span>I</span><span>R</span><i>O</i><span>N</span>
-    <small>SYSTEM ONLINE</small>
-  </a>
-  <div class="v7-clockbox">
-    <small id="hudDate">--.--.----</small>
-    <b id="hudTime">--:--</b>
-  </div>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<title>IRON // Fotos</title>
+<link rel="stylesheet" href="style.css?v=620">
+</head>
+<body>
+<div class="grid"></div><div class="scanlines"></div>
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="mark">I</span><div><b>IRON</b><small>PHOTO LIBRARY</small></div></a>
+  <div class="status"><i></i> <b id="photoLibraryState">APPWRITE</b></div>
 </header>
 
-<main class="v7-main"><section class="v7-photo-head"><article class="v7-panel"><div class="v7-cloud-icon">☁</div><div><h2>Appwrite Cloud Sync</h2><p>BILDER SICHER SYNCHRONISIERT</p><small id="photoLibraryState">APPWRITE // CONNECTING</small></div></article><article class="v7-panel"><div><h2>BILDARCHIV</h2><p>DEINE MOMENTE. ÜBERALL.</p></div><b id="v7PhotoCount">0</b><small>BILDER</small></article></section>
-<section class="v7-photo-toolbar"><div class="v7-searchbox">⌕ <input id="v7PhotoSearch" placeholder="Bilder durchsuchen ..."></div><button id="photoRefreshBtn">↻ SYNC</button><button id="v7PhotoSort">⇅ SORTIEREN</button></section>
-<section class="v7-panel v7-upload-drawer"><div class="v7-panel-title">NEUES BILD → APPWRITE</div><div class="v7-upload-grid"><input id="photoUploadName" placeholder="Bildname"><input id="photoUploadFile" type="file" accept="image/jpeg,image/png,image/webp"><textarea id="photoUploadDescription" placeholder="Beschreibung"></textarea><button id="photoUploadBtn">↑ HOCHLADEN</button></div></section>
-<section class="v7-panel v7-photo-library"><div class="v7-panel-title">ALLE BILDER <span>APPWRITE CLOUD</span></div><div id="photoGrid" class="photo-grid"><p>Lade Fotos...</p></div></section>
-
-<section class="v7-assistant">
-  <div id="response" class="v7-assistant-response">System bereit.</div>
-  <div id="answerText" class="v7-answer-text">Antworten von IRON erscheinen hier als Text.</div>
-  <div class="v7-commandbar">
-    <span class="v7-keyboard">⌨</span>
-    <input id="commandInput" placeholder="Nachricht an IRON ..." autocomplete="off">
-    <button id="voiceBtn" class="v7-mic" aria-label="Mit IRON sprechen">◉</button>
-    <button id="sendBtn" class="v7-send" aria-label="Senden">➤</button>
-  </div>
-  <b id="speechStatus" class="v7-speech-status">READY</b>
+<main class="page-main photos-page">
+<section class="page-heading">
+  <div class="eyebrow">IRON CLOUD // APPWRITE</div>
+  <h1>PHOTO<br><span>LIBRARY.</span></h1>
+  <p>Alle Fotos aus <b>iron_images</b> / <b>iron-images</b>.</p>
 </section>
 
-<section class="v7-quick-row"><button data-command="Analysiere mein letztes Bild">☆ <span>Schnelle Analyse</span></button><button data-command="Beschreibe mein letztes Bild">▤ <span>Beschreiben</span></button><button data-command="Was ist auf meinem letzten Bild?">◉ <span>Was ist das?</span></button><button onclick="document.getElementById('ironHamburger')?.click()">▦ <span>Mehr</span></button></section>
-</main>
-<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
-<script src="iron-appwrite.js?v=700"></script>
+<section class="photo-upload-panel">
+  <div class="title">UPLOAD TO APPWRITE <i></i></div>
+  <input id="photoUploadName" placeholder="Bildname, z. B. Chevalier Roth Logo">
+  <textarea id="photoUploadDescription" placeholder="Beschreibung (optional)"></textarea>
+  <input id="photoUploadFile" type="file" accept="image/jpeg,image/png,image/webp">
+  <div class="photo-actions">
+    <button id="photoUploadBtn">↑ HOCHLADEN</button>
+    <button id="photoRefreshBtn">↻ AKTUALISIEREN</button>
+  </div>
+</section>
 
-<script src="app.js?v=700"></script>
-<script src="mobile-bridge.js?v=700"></script>
-<script src="iron-menu.js?v=700"></script>
-<script src="iron-v7-ui.js?v=700"></script>
-</body></html>
+<section class="panel-section">
+  <div class="title">ALL APPWRITE PHOTOS <i></i></div>
+  <div id="photoGrid" class="photo-grid"><p>Lade Fotos...</p></div>
+</section>
+</main>
+
+
+
+<div id="response" class="floating-response">Fotos werden aus Appwrite geladen.</div>
+<div id="answerText" hidden></div><b id="speechStatus" hidden>READY</b>
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=620"></script>
+<script src="app.js?v=620"></script>
+<script src="mobile-bridge.js?v=620"></script>
+<script src="iron-menu.js?v=620"></script>
+</body>
+</html>

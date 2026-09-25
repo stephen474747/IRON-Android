@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IRON · Welt · Android</title>
+<link rel="stylesheet" href="style.css?v=630">
+<script src="https://unpkg.com/globe.gl"></script>
+<style>
+:root{--cyan:#85dafa;--soft:#457e9f;--bg:#061625;--panel:rgba(6,24,41,.94)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:#e2f5ff;font:14px Arial,sans-serif}
+#globe{position:absolute;inset:0;background:radial-gradient(circle at 39% 51%,#12304a 0,#091d32 31%,#061625 70%)}
+header{position:fixed;z-index:3;left:24px;right:24px;top:20px;display:flex;align-items:center;justify-content:space-between;pointer-events:none}
+.brand{font-size:22px;letter-spacing:.3em;font-weight:700}.brand span{color:var(--cyan)}.label{font-size:11px;letter-spacing:.16em;color:#89b4cb;margin-top:6px}
+.toolbar{position:fixed;z-index:4;left:24px;top:94px;width:292px;background:var(--panel);border:1px solid #396987;border-radius:14px;padding:15px;box-shadow:0 12px 30px #0005}
+.toolbar label{display:block;color:#9fc7db;font-size:12px;margin-bottom:9px}
+.search{display:flex;gap:7px}.search input{width:100%;min-width:0;background:#0a263e;border:1px solid #3c7593;color:white;border-radius:8px;padding:10px}
+button{background:#103550;border:1px solid #4b91b5;color:#d6f4ff;padding:9px 12px;border-radius:8px;cursor:pointer}button:hover,button:focus{background:#206187;outline:2px solid #8adfff}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px}.nav button{font-size:15px}
+.help{font-size:11px;color:#98bbcf;line-height:1.5;margin:13px 0 0}
+.panel{position:fixed;z-index:4;right:24px;top:94px;bottom:22px;width:min(375px,34vw);overflow:auto;background:var(--panel);border:1px solid #396987;border-radius:14px;padding:17px;box-shadow:0 16px 35px #0008}
+.panel h1{font-size:18px;letter-spacing:.04em;color:var(--cyan);margin:0 0 5px}.status{color:#a6c9da;font-size:12px;line-height:1.5;margin-bottom:13px}.article{padding:13px 0;border-top:1px solid #2a526c}.article a{color:#e7f8ff;text-decoration:none;font-size:14px;line-height:1.45;font-weight:600}.article a:hover{text-decoration:underline}.article small{display:block;color:#91d9f8;margin-top:7px}.actions{margin:0 0 10px}
+footer{position:fixed;z-index:3;left:24px;bottom:22px;color:#8eb7c9;font-size:11px;background:#071a2ad9;border:1px solid #315e77;border-radius:8px;padding:10px}
+@media(max-width:800px){.panel{width:calc(100% - 32px);left:16px;right:16px;top:auto;bottom:12px;height:32vh}.toolbar{left:16px;top:82px;width:230px}.brand{font-size:17px}footer{display:none}}
+</style></head><body>
+<div id="globe"></div>
+<header><div><div class="brand">IR<span>O</span>N</div><div class="label">WORLD · LIVE NEWS</div></div><div class="label" id="modeLabel">3D WELT</div></header>
+<div class="toolbar"><label for="countryInput">Land auswählen</label><div class="search"><input id="countryInput" list="countryList" placeholder="z. B. Luxemburg" autocomplete="off" aria-label="Land suchen"><datalist id="countryList"></datalist><button onclick="selectTyped()">Zeigen</button></div>
+<div class="nav" aria-label="Weltsteuerung"><button onclick="navigate('left')" title="Nach links">←</button><button onclick="navigate('up')" title="Nach oben">↑</button><button onclick="navigate('down')" title="Nach unten">↓</button><button onclick="navigate('right')" title="Nach rechts">→</button><button onclick="navigate('out')" title="Herauszoomen">−</button><button onclick="navigate('in')" title="Hineinzoomen">＋</button><button onclick="navigate('reset')" title="Zurücksetzen">⟲</button></div>
+<button id="voiceBtn" style="width:100%;margin-top:10px">🎙 Land sprechen</button><p class="help">Ziehen: drehen · Mausrad: zoomen · Rechtsklick ziehen: verschieben · Land anklicken: Nachrichten. Pfeiltasten und +/− funktionieren ebenfalls.</p></div>
+<aside class="panel"><h1 id="selected">DIE WELT</h1><div class="status" id="status">Weltkarte wird geladen…</div><div class="actions" id="actions" hidden><button onclick="readAloud()">▶ Vorlesen</button></div><div id="articles"></div></aside>
+<footer>30 FPS · 70 % Auflösung · Ländernews nur auf Auswahl</footer>
+<script>window.IRON_MOBILE=true;</script>
+<script>
+const statusEl=document.getElementById('status'),articlesEl=document.getElementById('articles'),selectedEl=document.getElementById('selected'),input=document.getElementById('countryInput'),actions=document.getElementById('actions');
+let features=[],selectedFeature=null,selectedCountry='',latestArticles=[],controlSeq=-1,loadId=0;
+const regionNames=new Intl.DisplayNames(['de'],{type:'region'});
+const aliases={luxemburg:'Luxembourg',deutschland:'Germany',frankreich:'France',österreich:'Austria',oesterreich:'Austria',schweiz:'Switzerland',großbritannien:'United Kingdom',grossbritannien:'United Kingdom',usa:'United States of America',welt:'World'};
+const globe=typeof Globe==='function'?Globe()(document.getElementById('globe')).backgroundColor('#061625').showAtmosphere(false):null;
+if(globe){
+  globe.controls().enableDamping=true;globe.controls().enablePan=true;globe.controls().autoRotate=false;
+  // The composer is the actual drawing path in globe.gl. Skip GPU draws above 30 FPS.
+  const composer=globe.postProcessingComposer();
+  const draw=composer.render.bind(composer);
+  let lastDraw=-Infinity;
+  composer.render=(...args)=>{const now=performance.now();if(now-lastDraw<1000/30)return;lastDraw=now;return draw(...args)};
+  globe.renderer().setPixelRatio(Math.max(.35,Math.min(window.devicePixelRatio||1,2)*.70));
+  globe.pointOfView({lat:17,lng:0,altitude:2.25},0);
+}
+function nameOf(f){return f?.properties?.ADMIN||f?.properties?.name||f?.properties?.NAME||'Land'}
+function isoOf(f){let p=f?.properties||{};return p.ISO_A2||p['ISO3166-1-Alpha-2']||p.iso_a2||p.ISO_A2_EH||''}
+function germanName(f){let iso=isoOf(f);try{return /^[A-Z]{2}$/.test(iso)?regionNames.of(iso):nameOf(f)}catch(e){return nameOf(f)}}
+function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase().replace(/[^a-z0-9]/g,'')}
+function findFeature(s){let q=norm(aliases[String(s||'').toLocaleLowerCase()]||s);return features.find(f=>norm(nameOf(f))===q||norm(germanName(f))===q)||null}
+function centroid(f){let rings=f?.geometry?.type==='Polygon'?[f.geometry.coordinates]:f?.geometry?.coordinates||[];let ring=rings.reduce((a,b)=>b?.[0]?.length>a.length?b[0]:a,[]);if(!ring.length)return {lat:0,lng:0};let v=[0,0,0];for(let [lng,lat] of ring){let y=lat*Math.PI/180,x=lng*Math.PI/180;v[0]+=Math.cos(y)*Math.cos(x);v[1]+=Math.cos(y)*Math.sin(x);v[2]+=Math.sin(y)}return {lng:Math.atan2(v[1],v[0])*180/Math.PI,lat:Math.atan2(v[2],Math.hypot(v[0],v[1]))*180/Math.PI}}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderMode(){
+  document.getElementById('modeLabel').textContent='3D WELT · ECO';
+  if(!globe)return;
+  const m=globe.globeMaterial();
+  if(m){m.color.set('#164265');m.emissive.set('#0b2b47');m.emissiveIntensity=.18;m.needsUpdate=true}
+  globe.polygonCapColor(f=>f===selectedFeature?'rgba(97,208,245,.95)':'rgba(31,91,129,.72)')
+    .polygonSideColor(()=>'rgba(49,132,169,.07)')
+    .polygonStrokeColor(f=>f===selectedFeature?'#c2f7ff':'rgba(121,205,243,.85)');
+}
+function navigate(op){if(!globe)return;let p=globe.pointOfView();globe.controls().autoRotate=false;if(op==='reset'){resetView();return}if(op==='in'||op==='out'){p.altitude=Math.max(.13,Math.min(3.6,p.altitude*(op==='in'?.73:1.37)))}else{if(op==='left')p.lng-=16;if(op==='right')p.lng+=16;if(op==='up')p.lat=Math.min(87,p.lat+12);if(op==='down')p.lat=Math.max(-87,p.lat-12)}globe.pointOfView(p,500)}
+async function notifySelection(){if(window.IRON_MOBILE)return;try{await fetch('/api/world/selected',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({country:selectedCountry,articles:latestArticles})})}catch(e){}}
+async function loadNews(name,notify=true){const thisLoad=++loadId;selectedCountry=name;selectedEl.textContent=name==='World'?'DIE WELT':name.toLocaleUpperCase();statusEl.textContent='Aktuelle Meldungen werden geprüft…';articlesEl.replaceChildren();actions.hidden=true;latestArticles=[];try{let endpoint=window.IRON_MOBILE?'https://starter-function-4j4o.fra.appwrite.run/api/world-news':'/api/world/news';let response=await fetch(endpoint+'?country='+encodeURIComponent(name));let data=await response.json();if(thisLoad!==loadId)return;if(!data.ok)throw Error(data.error||'Nachrichten nicht verfügbar');if(window.IRON_MOBILE&&data.source!=='verified_publisher_rss')throw Error('Cloud-Funktion 3.3.0 für geprüfte Ländernews installieren.');latestArticles=data.articles||[];statusEl.textContent=latestArticles.length?`${latestArticles.length} geprüfte Meldungen · ${name}`:`Für ${name} sind derzeit keine aktuellen Meldungen aus freigegebenen Quellen verfügbar.`;articlesEl.innerHTML=latestArticles.map(a=>`<div class="article"><a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(a.title)}</a><small>${escapeHtml(a.source)} · ${escapeHtml(a.published?new Date(a.published).toLocaleString('de-DE'):'')}</small></div>`).join('');actions.hidden=!latestArticles.length;if(notify&&latestArticles.length)notifySelection()}catch(e){if(thisLoad===loadId)statusEl.textContent='Abruf fehlgeschlagen: '+e.message}}
+function focusFeature(f){if(!globe||!f)return;selectedFeature=f;renderMode();let c=centroid(f);globe.controls().autoRotate=false;globe.pointOfView({...c,altitude:.95},900);input.value=germanName(f);loadNews(nameOf(f))}
+function focusCountry(s){if(norm(s)==='world'||norm(s)==='welt'){resetView();return}let f=findFeature(s);if(f)focusFeature(f);else{statusEl.textContent=`Land „${s}“ nicht auf der Karte gefunden.`;input.focus()}}
+function selectTyped(){focusCountry(input.value.trim())}
+function resetView(){if(!globe)return;++loadId;selectedFeature=null;selectedCountry='';latestArticles=[];input.value='';selectedEl.textContent='DIE WELT';statusEl.textContent='Wähle ein Land, um dessen aktuelle Nachrichten zu laden.';articlesEl.replaceChildren();actions.hidden=true;renderMode();globe.pointOfView({lat:17,lng:0,altitude:2.25},800)}
+function readAloud(){if(window.IRON_MOBILE){window.IRONMobile?.speak?.(latestArticles.slice(0,5).map(a=>a.title).join('. '));return}fetch('/befehl',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text:'lies die nachrichten vor'})}).catch(()=>{})}
+async function pollControl(){try{let d=await(await fetch('/api/world/control')).json();if(d.ok&&Number(d.seq)!==controlSeq){controlSeq=Number(d.seq);if(d.nav)navigate(d.nav);else if(d.country)focusCountry(d.country);else if(d.overview)resetView()}}catch(e){}}
+if(!window.IRON_MOBILE)setInterval(pollControl,1800);
+input.addEventListener('keydown',e=>{if(e.key==='Enter')selectTyped()});document.addEventListener('keydown',e=>{if(e.target===input)return;let keys={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down','+':'in','=':'in','-':'out'};if(keys[e.key]){e.preventDefault();navigate(keys[e.key])}});
+async function loadCountries(){if(!globe){statusEl.textContent='3D-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.';return}const urls=['https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson','https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_admin_0_countries.geojson'];for(let url of urls){try{let r=await fetch(url);if(!r.ok)throw Error('HTTP '+r.status);let data=await r.json();if(!Array.isArray(data.features)||data.features.length<150)throw Error('Ungültige Länderdaten');features=data.features;break}catch(e){}}if(!features.length){statusEl.textContent='Ländergrenzen konnten nicht geladen werden. Internetverbindung prüfen und Ansicht neu öffnen.';return}globe.polygonsData(features).polygonsTransitionDuration(0).polygonCapCurvatureResolution(12).polygonAltitude(0).polygonLabel(f=>`<b>${escapeHtml(germanName(f))}</b><br>Nachrichten öffnen`).onPolygonClick(f=>focusFeature(f));renderMode();let list=document.getElementById('countryList');list.innerHTML=features.flatMap(f=>[germanName(f),nameOf(f)]).filter((n,i,a)=>a.indexOf(n)===i).sort((a,b)=>a.localeCompare(b,'de')).map(n=>`<option value="${escapeHtml(n)}"></option>`).join('');let q=new URLSearchParams(location.search).get('country');if(q)focusCountry(q);else resetView();if(!window.IRON_MOBILE)pollControl()}
+loadCountries();window.addEventListener('resize',()=>{if(globe)globe.width(innerWidth).height(innerHeight)});
+</script>
+<script>
+window.command=async function(spoken){
+ const text=String(spoken||'').replace(/^iron[,\s]*/i,'').trim();
+ if(/^(?:was gibt es neues|was ist neu|welt(?:nachrichten)?|globus|öffne (?:die )?welt)$/i.test(text)){resetView();return}
+ const match=text.match(/(?:nachrichten|news)\s+(?:aus|von|zu|über|ueber)\s+(.+)$/i)
+   ||text.match(/(?:zeig|zeige|öffne|oeffne)\s+(?:mir\s+)?(?:das\s+land\s+)?(.+?)(?:\s+auf\s+der\s+welt)?$/i);
+ if(match){focusCountry(match[1].trim());return}
+ if(/zoom.*(?:rein|hinein)/i.test(text)){navigate('in');return}
+ if(/zoom.*(?:raus|heraus)/i.test(text)){navigate('out');return}
+ for(const [term,dir] of [['links','left'],['rechts','right'],['oben','up'],['unten','down']]){
+  if(text.toLowerCase().includes(term)){navigate(dir);return}
+ }
+ statusEl.textContent='Bitte ein Land nennen, zum Beispiel „Nachrichten aus Luxemburg“.';
+};
+</script>
+<script src="mobile-bridge.js?v=630"></script>
+<script src="iron-menu.js?v=630"></script>
+</body></html>

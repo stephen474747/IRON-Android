@@ -223,24 +223,15 @@ async function afterLogin(){
 window.ironLogout = async()=>{ await cloud.logout(); location.reload(); };
 
 // ---------- STATUS ----------
-let ironFunctionOnline=false;
-function updateIronLinkStatus(){
-  const el=$("#ironLinkStatus");if(!el)return;
-  const b=el.querySelector("b"),sm=el.querySelector("small");
-  if(pcOnline){el.classList.add("online");el.classList.remove("offline");if(b)b.textContent="PC ↔ ANDROID VERBUNDEN";if(sm)sm.textContent="LIVE ÜBER APPWRITE";}
-  else{el.classList.remove("online");el.classList.add("offline");if(b)b.textContent="PC LINK OFFLINE";if(sm)sm.textContent=ironFunctionOnline?"CLOUD ONLINE":"WARTE AUF VERBINDUNG";}
-}
 function setCloudStatus(ok){
-  ironFunctionOnline=!!ok;
   const el = $("#cloudStatus");
   if(el){
     el.textContent = ok ? "ONLINE" : "OFFLINE";
     el.classList.toggle("offline", !ok);
   }
   const hud = $("#hudCloud");
-  if(hud) hud.textContent = ok ? "ONLINE" : "OFFLINE";  updateIronLinkStatus();
+  if(hud) hud.textContent = ok ? "ONLINE" : "OFFLINE";
 }
-
 
 async function checkCloud(){
   try{
@@ -266,9 +257,8 @@ function setPCStatus(ok, lastSeen){
   }
 
   const hud = $("#hudPC");
-  if(hud) hud.textContent = ok ? "ONLINE" : "OFFLINE";  updateIronLinkStatus();
+  if(hud) hud.textContent = ok ? "ONLINE" : "OFFLINE";
 }
-
 
 async function checkPC(){
   if(!currentUser) return;
@@ -353,7 +343,7 @@ async function renderPlansScreen(){
   }catch{}
 
   rows=rows
-    .filter(r=>String(r.typ||"").toLowerCase()!=="einkauf" && String(r.typ||"").toLowerCase()!=="idee" && !String(r.name||"").startsWith("EINKAUF // ") && !String(r.name||"").startsWith("IDEE // "))
+    .filter(r=>String(r.typ||"").toLowerCase()!=="einkauf" && !String(r.name||"").startsWith("EINKAUF // "))
     .sort((a,b)=>String(b.erstellt||"").localeCompare(String(a.erstellt||"")));
 
   if(!rows.length){
@@ -1025,18 +1015,10 @@ async function createCalendarFromCommand(raw){
   }
   const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Luxembourg";
   const parsed=await postIronJSON("/api/calendar/parse",{text:raw,now:new Date().toISOString(),timezone});
-  parsed.event.important=/\b(wichtig|sehr wichtig|dringend|unbedingt)\b/i.test(String(raw||""));
-  if(parsed.event.important && !Number.isFinite(Number(parsed.event.reminder_minutes))){
-    parsed.event.reminder_minutes=15;
-  }
   await window.IRONMobile.createCalendarEvent(parsed.event);
   const when=new Date(parsed.event.start).toLocaleString("de-DE");
-  const notifyText=parsed.event.important
-    ? " Ich erinnere Sie zusätzlich rechtzeitig mit einer wichtigen IRON-Benachrichtigung."
-    : " Ich erinnere Sie vorher mit einer IRON-Benachrichtigung.";
-  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.${notifyText}`;
+  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.`;
   show(msg); await speak(msg);
-  window.dispatchEvent(new Event("iron-calendar-updated"));
   return parsed.event;
 }
 
@@ -1126,8 +1108,11 @@ function imageNameScore(name,q){
 }
 
 async function openPhotoLibraryItem(id){
-  if(!id) return;
-  location.href=`photo-viewer.html?id=${encodeURIComponent(id)}`;
+  show("IRON lädt das Foto aus Appwrite...");
+  const data=await ironImageGet(id,false);
+  if(!data?.image?.data_url) throw new Error("Bilddaten fehlen.");
+  currentCloudImage=data.image;
+  openImageStudio(data.image.data_url,data.image);
 }
 
 async function uploadPhotoLibraryFile(){
@@ -1214,41 +1199,6 @@ Schritte:
 4. Fortschritt regelmäßig prüfen.
 5. Plan bei Bedarf anpassen.`;
 }
-let pendingIdeaCapture=false;
-
-function ideaRequested(t){
-  return /\b(?:ich\s+hab(?:e)?\s+eine\s+idee|neue\s+idee|speichere\s+(?:diese\s+)?idee|merk(?:e)?\s+dir\s+(?:diese\s+)?idee)\b/i.test(String(t||""));
-}
-function extractIdeaText(t){
-  return String(t||"")
-    .replace(/^\s*(?:iron|airon|eiron|ayron|eyron|bayern|bairon|beiron)[\s,.:;-]*/i,"")
-    .replace(/^\s*(?:ich\s+hab(?:e)?\s+eine\s+idee|neue\s+idee|speichere\s+(?:diese\s+)?idee|merk(?:e)?\s+dir\s+(?:diese\s+)?idee)\s*(?:[:,-]|und\s+zwar)?\s*/i,"")
-    .trim();
-}
-async function createIdea(text){
-  const idea=String(text||"").replace(/\s+/g," ").trim();
-  if(!idea) throw new Error("Idee ist leer.");
-  const short=idea.slice(0,72).replace(/[ .,:;-]+$/,"");
-  const payload={name:`IDEE // ${short||"Neue Idee"}`,inhalt:idea,erstellt:new Date().toISOString(),typ:"idee"};
-  const row=await cloud.create(cloud.cfg.tables.plans,payload);
-  try{await renderIdeasScreen();}catch{}
-  return row;
-}
-async function deleteIdea(id){await cloud.remove(cloud.cfg.tables.plans,id);await renderIdeasScreen();}
-async function renderIdeasScreen(){
-  const host=$("#ideasList"); if(!host||!currentUser)return;
-  host.innerHTML="<p class='muted'>Lade Ideen aus IRON Cloud...</p>";
-  let rows=[];
-  try{rows=await cloud.list(cloud.cfg.tables.plans,[cloud.Query.orderDesc("$createdAt"),cloud.Query.limit(150)]);}
-  catch(e){host.innerHTML=`<article class="saved-card"><h3>CLOUD-FEHLER</h3><p>${escapeHtml(e?.message||String(e))}</p></article>`;return;}
-  rows=rows.filter(r=>String(r.typ||"").toLowerCase()==="idee"||String(r.name||"").toUpperCase().startsWith("IDEE //"))
-    .sort((a,b)=>String(b.erstellt||b.$createdAt||"").localeCompare(String(a.erstellt||a.$createdAt||"")));
-  const count=$("#ideaCount");if(count)count.textContent=String(rows.length);
-  if(!rows.length){host.innerHTML=`<div class="empty-screen"><div>✦</div><strong>NO IDEAS YET</strong><p>Sag: „IRON, ich habe eine Idee: ein Restaurant …“</p></div>`;return;}
-  host.innerHTML=rows.map(r=>`<article class="saved-card idea-card"><header><h3>${escapeHtml(String(r.name||"Idee").replace(/^IDEE\s*\/\/\s*/i,""))}</h3><small>${escapeHtml(formatDate(r.erstellt||r.$createdAt))}</small></header><p>${escapeHtml(r.inhalt||"")}</p>${r.$id?`<button data-delete-idea="${escapeHtml(r.$id)}">LÖSCHEN</button>`:""}</article>`).join("");
-  host.querySelectorAll("[data-delete-idea]").forEach(btn=>{btn.onclick=()=>deleteIdea(btn.dataset.deleteIdea).catch(e=>show("Löschen fehlgeschlagen: "+e.message));});
-}
-
 function taskRequested(t){ return /(erstelle|erstell|mach).{0,15}(task|aufgabe)/i.test(t); }
 function localPCCommand(t){
   return /(öffne|oeffne|starte|schließe|schliesse|bildschirm|desktop|hud|spotify|programm|datei|ordner|zoom|beschreib.*bild|bild.*beschreib)/i.test(t);
@@ -1261,19 +1211,15 @@ async function queuePCCommand(t){
 }
 async function command(t){
   t=(t||"").trim();
-  t=t.replace(/^(?:iron|airon|eiron|ayron|eyron|bayern|bairon|beiron)[\s,.:;-]+/i,"").trim();
-  if(!t || !currentUser) return;
+  if(!t)return;
+  if(/was gibt es neues|was ist neu|welt(?:karte|nachrichten|news)?|globus|3d erde/i.test(t)
+     || /(?:nachrichten|news)\s+(?:aus|von|zu|über|ueber)\s+[A-Za-zÀ-ÿ]/i.test(t)){
+    location.href="world.html";return;
+  }
+  if(!currentUser) return;
   if(input) input.value="";
   show("Befehl wird verarbeitet...");
   try{
-    if(pendingIdeaCapture){
-      pendingIdeaCapture=false;await createIdea(t);show(`Idee gespeichert: ${t}`);speak("Idee gespeichert.");return;
-    }
-    if(ideaRequested(t)){
-      const idea=extractIdeaText(t);
-      if(!idea){pendingIdeaCapture=true;show("Natürlich. Was ist deine Idee?");speak("Natürlich. Was ist deine Idee?");return;}
-      await createIdea(idea);show(`Idee gespeichert: ${idea}`);speak("Idee gespeichert.");return;
-    }
     if(calendarCommandRequested(t)){
       await createCalendarFromCommand(t);
       return;
@@ -1281,12 +1227,6 @@ async function command(t){
     if(mailSummaryRequested(t)){
       await summarizeImportantMails();
       return;
-    }
-    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(kalender|termine|terminübersicht|terminuebersicht)\b/i.test(t)){
-      location.href="calendar.html"; return;
-    }
-    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(bilder|galerie|bildschirm|foto galerie|fotogalerie)\b/i.test(t)){
-      location.href="bilder.html"; return;
     }
     // Pure navigation/read requests must never call an API route.
     if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(einkaufsliste|einkaufs\s*liste|einkauf)\b/i.test(t)){
@@ -1407,9 +1347,6 @@ $$('nav button').forEach(btn=>{
   if(label==='SETUP') btn.onclick=()=>location.href='diagnostics.html';
 });
 
-const ideaSaveBtn=$("#ideaSaveBtn");
-if(ideaSaveBtn){ideaSaveBtn.onclick=async()=>{const box=$("#ideaInput"),text=String(box?.value||"").trim();if(!text){show("Schreib zuerst deine Idee auf.");return;}try{await createIdea(text);if(box)box.value="";show("Idee gespeichert und synchronisiert.");await renderIdeasScreen();}catch(e){show("Idee konnte nicht gespeichert werden: "+(e?.message||e));}};}
-
 const newsBtn=$("#newsBtn");
 if(newsBtn) newsBtn.onclick=loadNews;
 const stocksBtn=$("#stocksBtn");
@@ -1447,7 +1384,7 @@ async function updateHudMetrics(){
       cloud.list(cloud.cfg.tables.tasks,[cloud.Query.limit(100)]),
       cloud.list(cloud.cfg.tables.plans,[cloud.Query.limit(100)])
     ]);
-    const normalPlans=plans.filter(p=>!String(p.name||"").startsWith(SHOP_PREFIX) && String(p.typ||"").toLowerCase()!=="idee" && !String(p.name||"").startsWith("IDEE // "));
+    const normalPlans=plans.filter(p=>!String(p.name||"").startsWith(SHOP_PREFIX));
     const shopping=plans.filter(p=>String(p.name||"").startsWith(SHOP_PREFIX));
     const openTasks=tasks.filter(t=>!t.erledigt);
     const map={
@@ -1539,7 +1476,7 @@ if(SR&&voiceBtn){
 }
 
 window.command=command;
-window.renderPlansScreen=renderPlansScreen; window.renderTasksScreen=renderTasksScreen; window.renderIdeasScreen=renderIdeasScreen;
+window.renderPlansScreen=renderPlansScreen; window.renderTasksScreen=renderTasksScreen;
 window.deletePlanAndRefresh=deletePlanAndRefresh; window.toggleTaskAndRefresh=toggleTaskAndRefresh;
 
 initAuth().catch(e=>{
@@ -1553,7 +1490,6 @@ setInterval(()=>{if(currentUser&&!document.hidden){checkCloud();checkPC();}},150
 window.addEventListener("DOMContentLoaded",()=>{
   const path=location.pathname.toLowerCase();
   if(path.includes("plans")) renderPlansScreen().catch(console.warn);
-  if(path.includes("ideas")) renderIdeasScreen().catch(console.warn);
   if(path.includes("einkauf")) renderShoppingScreen().catch(console.warn);
 });
 
@@ -1561,7 +1497,6 @@ window.addEventListener("pageshow",()=>{
   const path=location.pathname.toLowerCase();
   if(path.includes("einkauf")) renderShoppingScreen().catch(console.warn);
   if(path.includes("plans")) renderPlansScreen().catch(console.warn);
-  if(path.includes("ideas")) renderIdeasScreen().catch(console.warn);
 });
 
 
@@ -1645,7 +1580,3 @@ document.addEventListener("DOMContentLoaded",()=>{
     const upload=$("#photoUploadBtn"); if(upload) upload.onclick=()=>uploadPhotoLibraryFile().catch(e=>show("Upload-Fehler: "+e.message));
   }
 });
-
-
-window.createTask = createTask;
-window.createCalendarFromCommand = createCalendarFromCommand;
