@@ -34,6 +34,7 @@ function cleanSpeechText(value) {
 async function speak(text) {
   text = cleanSpeechText(text);
   if (!text) return;
+  window.ironSetActivity?.('thinking');
 
   // V5.5: IRON has its own cloud voice. Never fall back to the phone's TTS voice.
   try {
@@ -54,6 +55,7 @@ async function speak(text) {
 
     const audio = new Audio(`data:${data.mime_type || "audio/mpeg"};base64,${data.audio_base64}`);
     activeAudio = audio;
+    window.ironSetActivity?.('speaking');
 
     await new Promise((resolve, reject) => {
       audio.onended = resolve;
@@ -69,6 +71,7 @@ async function speak(text) {
     }));
   } finally {
     activeAudio = null;
+    window.ironSetActivity?.('ready');
   }
 }
 
@@ -134,6 +137,7 @@ async function scheduleNotification({title='IRON TASK', body='Task-Erinnerung', 
 }
 
 async function listenOnce(){
+  window.ironSetActivity?.('listening');
   let p = await SpeechRecognition.checkPermissions();
   if(p?.speechRecognition !== 'granted') p = await SpeechRecognition.requestPermissions();
   if(p?.speechRecognition !== 'granted') throw new Error('Spracherkennung wurde nicht erlaubt.');
@@ -153,7 +157,86 @@ async function listenOnce(){
     const msg=String(e?.message || e || '').toLowerCase();
     if(msg.includes('no match') || msg.includes('nomatch')) return '';
     throw e;
+  }finally{
+    window.ironSetActivity?.('ready');
   }
+}
+
+let pairedSmsUser = '';
+let smsPollBusy = false;
+async function cloudSms(path, payload = {}) {
+  const cloud = window.IRONCloud;
+  const user = await cloud?.currentUser();
+  if (!user) throw new Error('Bitte mit dem IRON-Konto anmelden.');
+  const token = await cloud.account.createJWT();
+  const response = await fetch(`${cloud.cfg.functionDomain}/api/sms/${path}`, {
+    method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'},
+    body:JSON.stringify({...payload, userJwt:token.jwt})
+  });
+  const data = await response.json();
+  if (!response.ok || !data.ok) throw new Error(data.error || `SMS HTTP ${response.status}`);
+  return data;
+}
+
+function decodeSmsCommand(command) {
+  const parts=String(command).split('::');
+  const version=parts[0];
+  if (!((version==='SMS'&&parts.length===4)||(version==='SMSV2'&&parts.length===5))) throw new Error('Ungültiger SMS-Auftrag.');
+  const slot=Number(parts[1]),number=version==='SMS'?parts[2]:parts[3];
+  if(!/^[+]?\d{5,18}$/.test(number)||![1,2].includes(slot)) throw new Error('SMS-Ziel oder SIM nicht unterstützt.');
+  const encoded=parts[parts.length-1];
+  if (!/^[A-Za-z0-9_-]{1,7000}$/.test(encoded)) throw new Error('SMS-Codierung ungültig.');
+  const bytes=Uint8Array.from(atob(encoded.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+  const message=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
+  if (!message.trim() || message.length>5000) throw new Error('SMS-Text ungültig.');
+  return {number,message,slot};
+}
+
+async function pairSms() {
+  if (!state.native) throw new Error('SMS nur in der Android-App.');
+  const cloud=window.IRONCloud,user=await cloud?.currentUser();
+  if (!user) throw new Error('Bitte zuerst bei IRON anmelden.');
+  if (pairedSmsUser===user.$id) return;
+  await cloud.create(cloud.cfg.tables.pcCommands, {
+    command:`SMS_REGISTER::${user.$id}`,status:'pending',created_at:new Date().toISOString(),result:''
+  });
+  pairedSmsUser=user.$id;
+  window.dispatchEvent(new CustomEvent('iron-sms-status',{detail:'Android und PC werden gekoppelt.'}));
+}
+
+async function pollSms() {
+  if(!state.native || smsPollBusy || document.hidden) return;
+  smsPollBusy=true;
+  try {
+    await pairSms();
+    const {items=[]}=await cloudSms('pending');
+    for (const item of items) {
+      // Decode before claiming: malformed or unsupported SIM requests remain visible for diagnosis.
+      let sms;
+      try { sms=decodeSmsCommand(item.command); }
+      catch(e){ window.dispatchEvent(new CustomEvent('iron-sms-status',{detail:e.message})); continue; }
+      try { await cloudSms('claim',{id:item.id}); } catch { continue; }
+      try {
+        await IronPhone.sendSms(sms);
+        await cloudSms('ack',{id:item.id,sent:true});
+        window.dispatchEvent(new CustomEvent('iron-sms-status',{detail:'SMS an Android übergeben: '+sms.number}));
+      }catch(e){
+        await cloudSms('ack',{id:item.id,sent:false,error:String(e.message||e)}).catch(()=>{});
+        window.dispatchEvent(new CustomEvent('iron-sms-status',{detail:'SMS-Fehler: '+String(e.message||e)}));
+      }
+    }
+  }catch(e){ log('SMS relay:',e?.message||e); }
+  finally { smsPollBusy=false; }
+}
+
+async function composeSms(number,message) {
+  if(!state.native) throw new Error('SMS-App nur auf Android verfügbar.');
+  return IronPhone.composeSms({number,message});
+}
+
+async function sendSms(number,message,slot=1) {
+  if(!state.native) throw new Error('SMS-Versand nur auf Android verfügbar.');
+  return IronPhone.sendSms({number,message,slot});
 }
 
 async function pickHudImage(){
@@ -307,9 +390,7 @@ async function cloudSelfTest(){
 
 
 async function callContactByName(name){
-  if(!isNative) throw new Error('Kontaktanrufe sind nur in der Android-App verfügbar.');
-  const IronPhone = registerPlugin('IronPhone');
-const IronCalendar = registerPlugin('IronCalendar');
+  if(!state.native) throw new Error('Kontaktanrufe sind nur in der Android-App verfügbar.');
   const found = await IronPhone.lookupContact({ name:String(name||'').trim() });
   if(!found?.number) throw new Error('Keine Telefonnummer für diesen Kontakt gefunden.');
   await speak(`Ich rufe ${found.name || name} an.`);
@@ -321,6 +402,15 @@ function installContactVoiceCommands(){
   if(typeof original !== 'function') return;
   window.command = async function(text){
     const raw=String(text||'').trim();
+    const sms=raw.match(/^(?:iron[,\s]*)?(?:sende|schicke)\s+(?:eine?\s+)?sms\s+an\s+(\+?[0-9\s()-]{5,24})\s+(?:mit\s+(?:dem\s+)?text|text)\s+(.+)$/i);
+    if(sms){
+      try{
+        const number=sms[1].replace(/[\s()-]/g,'');
+        await sendSms(number,sms[2].trim(),1);
+        window.show?.('SMS an Android übergeben: '+number+'. Zustellung noch nicht bestätigt.');
+      }catch(e){ window.show?.('SMS-Fehler: '+(e?.message||e)); }
+      return;
+    }
     const m=raw.match(/^(?:iron[,\s]*)?(?:ruf|rufe)\s+(.+?)(?:\s+an)?$/i);
     if(m){
       try{
@@ -359,7 +449,9 @@ async function init(){
   await requestNotifications().catch(()=>{});
   cloudSelfTest().catch(()=>{});
   setTimeout(installContactVoiceCommands, 500);
-  App.addListener('appStateChange',({isActive})=>{ if(isActive) window.dispatchEvent(new Event('iron-app-resume')); });
+  App.addListener('appStateChange',({isActive})=>{ if(isActive) { window.dispatchEvent(new Event('iron-app-resume')); pollSms(); } });
+  setTimeout(pollSms, 1500);
+  setInterval(pollSms, 15000);
 
   installHudControls();
   installTaskReminderUI();
@@ -375,6 +467,10 @@ window.IRONMobile = {
   callNumber,
   cloudSelfTest,
   callContactByName,
+  composeSms,
+  sendSms,
+  pairSms,
+  pollSms,
   createCalendarEvent,
   startConversation,
   stopConversation,

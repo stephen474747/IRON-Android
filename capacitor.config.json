@@ -1,11 +1,11 @@
 {
-	"appId": "com.iron.assistant",
-	"appName": "IRON",
-	"webDir": "www",
-	"server": {
-		"androidScheme": "https"
-	},
-	"android": {
-		"allowMixedContent": false
-	}
+  "appId": "com.iron.assistant",
+  "appName": "IRON",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
 }
