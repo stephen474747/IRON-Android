@@ -224,8 +224,8 @@ window.ironLogout = async()=>{ await cloud.logout(); location.reload(); };
 
 // ---------- STATUS ----------
 function setCloudStatus(ok){
-  const el = $("#cloudStatus");
-  if(el){
+  for(const el of [$("#cloudStatus"),$("#cloudStatusFooter")]){
+    if(!el) continue;
     el.textContent = ok ? "ONLINE" : "OFFLINE";
     el.classList.toggle("offline", !ok);
   }
@@ -1015,18 +1015,10 @@ async function createCalendarFromCommand(raw){
   }
   const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Luxembourg";
   const parsed=await postIronJSON("/api/calendar/parse",{text:raw,now:new Date().toISOString(),timezone});
-  parsed.event.important=/\b(wichtig|sehr wichtig|dringend|unbedingt)\b/i.test(String(raw||""));
-  if(parsed.event.important && !Number.isFinite(Number(parsed.event.reminder_minutes))){
-    parsed.event.reminder_minutes=15;
-  }
   await window.IRONMobile.createCalendarEvent(parsed.event);
   const when=new Date(parsed.event.start).toLocaleString("de-DE");
-  const notifyText=parsed.event.important
-    ? " Ich erinnere Sie zusätzlich rechtzeitig mit einer wichtigen IRON-Benachrichtigung."
-    : " Ich erinnere Sie vorher mit einer IRON-Benachrichtigung.";
-  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.${notifyText}`;
+  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.`;
   show(msg); await speak(msg);
-  window.dispatchEvent(new Event("iron-calendar-updated"));
   return parsed.event;
 }
 
@@ -1116,8 +1108,11 @@ function imageNameScore(name,q){
 }
 
 async function openPhotoLibraryItem(id){
-  if(!id) return;
-  location.href=`photo-viewer.html?id=${encodeURIComponent(id)}`;
+  show("IRON lädt das Foto aus Appwrite...");
+  const data=await ironImageGet(id,false);
+  if(!data?.image?.data_url) throw new Error("Bilddaten fehlen.");
+  currentCloudImage=data.image;
+  openImageStudio(data.image.data_url,data.image);
 }
 
 async function uploadPhotoLibraryFile(){
@@ -1215,7 +1210,14 @@ async function queuePCCommand(t){
   return row;
 }
 async function command(t){
-  t=(t||"").trim(); if(!t || !currentUser) return;
+  t=(t||"").trim();
+  if(!t)return;
+  if(/was gibt es neues|was ist neu|welt(?:karte|nachrichten|news)?|globus|3d erde/i.test(t)
+     || /(?:nachrichten|news)\s+(?:aus|von|zu|über|ueber)\s+[A-Za-zÀ-ÿ]/i.test(t)){
+    const country=t.match(/(?:nachrichten|news)\s+(?:aus|von|zu|über|ueber)\s+(.+?)\s*[.!?]?$/i);
+    location.href=country?`world.html?country=${encodeURIComponent(country[1].trim())}`:"world.html";return;
+  }
+  if(!currentUser) return;
   if(input) input.value="";
   show("Befehl wird verarbeitet...");
   try{
@@ -1226,12 +1228,6 @@ async function command(t){
     if(mailSummaryRequested(t)){
       await summarizeImportantMails();
       return;
-    }
-    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(kalender|termine|terminübersicht|terminuebersicht)\b/i.test(t)){
-      location.href="calendar.html"; return;
-    }
-    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(bilder|galerie|bildschirm|foto galerie|fotogalerie)\b/i.test(t)){
-      location.href="bilder.html"; return;
     }
     // Pure navigation/read requests must never call an API route.
     if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(einkaufsliste|einkaufs\s*liste|einkauf)\b/i.test(t)){
@@ -1585,7 +1581,3 @@ document.addEventListener("DOMContentLoaded",()=>{
     const upload=$("#photoUploadBtn"); if(upload) upload.onclick=()=>uploadPhotoLibraryFile().catch(e=>show("Upload-Fehler: "+e.message));
   }
 });
-
-
-window.createTask = createTask;
-window.createCalendarFromCommand = createCalendarFromCommand;

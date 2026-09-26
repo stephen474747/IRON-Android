@@ -1,7 +1,6 @@
 package com.iron.assistant;
 
 import android.Manifest;
-import android.content.ContentUris;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
@@ -10,7 +9,6 @@ import android.content.pm.PackageManager;
 
 import androidx.core.content.ContextCompat;
 
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -127,80 +125,4 @@ public class IronCalendarPlugin extends Plugin {
             call.reject("Kalendereintrag fehlgeschlagen: " + e.getMessage(), e);
         }
     }
-
-    @PluginMethod
-    public void listEvents(PluginCall call) {
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissionForAlias("calendar", call, "calendarListPermissionCallback");
-            return;
-        }
-        queryEvents(call);
-    }
-
-    @PermissionCallback
-    private void calendarListPermissionCallback(PluginCall call) {
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED) {
-            queryEvents(call);
-        } else {
-            call.reject("Kalender-Berechtigung wurde nicht erteilt.");
-        }
-    }
-
-    private void queryEvents(PluginCall call) {
-        Cursor cursor = null;
-        try {
-            long now = System.currentTimeMillis();
-            long start = call.getLong("start", now - 86400000L);
-            long end = call.getLong("end", now + (90L * 86400000L));
-
-            Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
-            ContentUris.appendId(builder, start);
-            ContentUris.appendId(builder, end);
-
-            String[] projection = new String[] {
-                CalendarContract.Instances.EVENT_ID,
-                CalendarContract.Instances.TITLE,
-                CalendarContract.Instances.BEGIN,
-                CalendarContract.Instances.END,
-                CalendarContract.Instances.EVENT_LOCATION,
-                CalendarContract.Instances.DESCRIPTION,
-                CalendarContract.Instances.ALL_DAY,
-                CalendarContract.Instances.CALENDAR_DISPLAY_NAME
-            };
-
-            cursor = getContext().getContentResolver().query(
-                builder.build(),
-                projection,
-                null,
-                null,
-                CalendarContract.Instances.BEGIN + " ASC"
-            );
-
-            JSArray events = new JSArray();
-            if (cursor != null) {
-                while (cursor.moveToNext()) {
-                    JSObject item = new JSObject();
-                    item.put("eventId", cursor.getLong(0));
-                    item.put("title", cursor.isNull(1) ? "Termin" : cursor.getString(1));
-                    item.put("start", cursor.getLong(2));
-                    item.put("end", cursor.getLong(3));
-                    item.put("location", cursor.isNull(4) ? "" : cursor.getString(4));
-                    item.put("description", cursor.isNull(5) ? "" : cursor.getString(5));
-                    item.put("allDay", cursor.getInt(6) == 1);
-                    item.put("calendar", cursor.isNull(7) ? "" : cursor.getString(7));
-                    events.put(item);
-                }
-            }
-
-            JSObject ret = new JSObject();
-            ret.put("ok", true);
-            ret.put("events", events);
-            call.resolve(ret);
-        } catch (Exception e) {
-            call.reject("Kalender konnte nicht gelesen werden: " + e.getMessage(), e);
-        } finally {
-            if (cursor != null) cursor.close();
-        }
-    }
-
 }

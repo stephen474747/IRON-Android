@@ -1,22 +1,38 @@
-<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02070b"><title>IRON // Diagnose</title><link rel="stylesheet" href="style.css?v=700"></head>
-<body class="v7 v7-diagnostics"><div class="grid"></div><div class="scanlines"></div>
-<header class="v7-header">
-  <div class="v7-header-spacer"></div>
-  <a class="v7-logo" href="index.html" aria-label="IRON Home">
-    <span>I</span><span>R</span><i>O</i><span>N</span>
-    <small>SYSTEM DIAGNOSTICS</small>
-  </a>
-  <div class="v7-clockbox">
-    <small id="hudDate">--.--.----</small>
-    <b id="hudTime">--:--</b>
-  </div>
-</header>
-
-<main class="v7-main"><section class="v7-subtitle">SYSTEMKONTROLLE // CLOUD ROUTES // APPWRITE</section><section class="v7-panel v7-diag-hero"><div class="v7-diag-reactor">◎</div><div><h2>IRON SYSTEM CHECK</h2><p>Testet Cloud, Chat, News, Aktien, Wetter und wichtige API-Routen.</p><b id="base"></b></div></section><section class="v7-panel"><div class="v7-panel-title">ROUTE DIAGNOSTICS</div><div class="v7-button-row"><button id="routeCheck">ROUTES TESTEN</button><button id="all">ALLE TESTEN</button><button id="copy">DIAGNOSE KOPIEREN</button></div><pre id="result" class="v7-diagnostic-output">Bereit.</pre></section></main>
-<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script><script src="iron-appwrite.js?v=700"></script><script src="app.js?v=700"></script>
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06111d">
+<title>IRON · Diagnose</title>
+<link rel="stylesheet" href="style.css?v=650">
+<style>
+.diagnostic-box{padding:16px;margin:0 0 14px;border:1px solid #295777;border-radius:14px;background:#0b1c2ccc}
+.diagnostic-box h2{margin:0 0 8px;font-size:16px}
+.diagnostic-box pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#06111d;padding:12px;border-radius:9px;font-size:12px;line-height:1.5}
+.diagnostic-actions{display:flex;gap:8px;flex-wrap:wrap}.diagnostic-actions button{min-height:44px;padding:9px 12px;border:1px solid #397394;background:#10334a;color:#e7f6ff;border-radius:9px}
+</style>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="index.html"><span class="mark">I</span><div><b>IRON</b><small>DIAGNOSE</small></div></a><div class="status">SYSTEM</div></header>
+<main class="page-main">
+<section class="page-heading"><div class="eyebrow">IRON CORE // STATUS</div><h1>DIAGNOSE<span>.</span></h1><p>Verbindung und Cloud-Routen prüfen. Zugangsdaten werden nicht ausgegeben.</p></section>
+<section class="diagnostic-box"><h2>Cloud-Funktion</h2><pre id="base"></pre></section>
+<section class="diagnostic-box"><h2>Prüfung</h2><div class="diagnostic-actions"><button id="routeCheck">ROUTEN TESTEN</button><button id="all">ALLE TESTEN</button><button id="copy">ERGEBNIS KOPIEREN</button></div><pre id="result">Bereit.</pre></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=650"></script>
 <script>
-const C=window.IRONCloud,$d=s=>document.querySelector(s),BASE=C?.cfg?.functionDomain||'';$d('#base').textContent=BASE;
-async function get(path){const started=performance.now();try{const r=await fetch(BASE+path,{cache:'no-store'}),raw=await r.text();let data;try{data=JSON.parse(raw)}catch{};return {route:path,http:r.status,ok:r.ok&&data?.ok!==false,ms:Math.round(performance.now()-started),preview:data?JSON.stringify(data).slice(0,260):raw.slice(0,260)}}catch(e){return {route:path,ok:false,error:e.message}}}
-async function run(){const out={app:'IRON Android V7',function:BASE,time:new Date().toISOString(),tests:[]};for(const p of ['/api/status','/api/news','/api/stocks?symbols=AAPL','/api/weather?city=Luxembourg'])out.tests.push(await get(p));$d('#result').textContent=JSON.stringify(out,null,2);return out}
-$d('#all').onclick=run;$d('#copy').onclick=async()=>{try{await navigator.clipboard.writeText($d('#result').textContent)}catch{}};$d('#routeCheck').onclick=async()=>{$d('#result').textContent=JSON.stringify(await window.ironRouteSelfCheck(),null,2)};
-</script><script src="mobile-bridge.js?v=700"></script><script src="iron-menu.js?v=700"></script><script src="iron-v7-ui.js?v=700"></script></body></html>
+const C=window.IRONCloud,$=s=>document.querySelector(s);const BASE=C?.cfg?.functionDomain||'';
+$('#base').textContent=BASE||'Keine Cloud-Funktion konfiguriert';
+async function get(path){const started=performance.now();try{const r=await fetch(BASE+path,{cache:'no-store'}),raw=await r.text();let data;try{data=JSON.parse(raw)}catch{}return {route:path,http:r.status,ok:r.ok&&data?.ok!==false,ms:Math.round(performance.now()-started),source:data?.source||null,preview:data?JSON.stringify(data).slice(0,220):raw.slice(0,220)}}catch(e){return {route:path,ok:false,error:e.message}}}
+async function run(){const out={app:'IRON Android V6.5',function:BASE,time:new Date().toISOString(),tests:[]};for(const route of ['/api/status','/api/news','/api/stocks?symbols=AAPL','/api/weather?city=Luxembourg'])out.tests.push(await get(route));try{const u=await C.currentUser();if(!u)out.tests.push({route:'/api/chat',ok:false,error:'Nicht angemeldet'});else{const started=performance.now(),reply=await C.askAI('Antworte nur mit: IRON CLOUD OK');out.tests.push({route:'/api/chat',ok:true,ms:Math.round(performance.now()-started),preview:String(reply).slice(0,220)})}}catch(e){out.tests.push({route:'/api/chat',ok:false,error:e.message})}$('#result').textContent=JSON.stringify(out,null,2);return out}
+$('#all').onclick=run;
+$('#copy').onclick=async()=>{const t=$('#result').textContent;try{await navigator.clipboard.writeText(t);alert('Diagnose kopiert.')}catch{alert('Kopieren nicht möglich. Markiere den Text manuell.')}};
+</script>
+<script src="mobile-bridge.js?v=650"></script>
+<script src="iron-menu.js?v=650"></script>
+<script>
+document.getElementById('routeCheck').onclick=async()=>{const out=document.getElementById('result');out.textContent='Teste...';try{out.textContent=JSON.stringify(await window.ironRouteSelfCheck(),null,2)}catch(e){out.textContent=e.stack||e.message}};
+</script>
+</body></html>

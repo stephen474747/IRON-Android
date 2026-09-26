@@ -1,88 +1,70 @@
-<!DOCTYPE html><html lang="de"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#02070b"><title>IRON // System Online</title>
-<link rel="stylesheet" href="style.css?v=700"></head>
-<body class="v7 v7-home"><div class="grid"></div><div class="scanlines"></div>
-
-<header class="v7-header">
-  <div class="v7-header-spacer"></div>
-  <a class="v7-logo" href="index.html" aria-label="IRON Home">
-    <span>I</span><span>R</span><i>O</i><span>N</span>
-    <small>SYSTEM ONLINE</small>
-  </a>
-  <div class="v7-clockbox">
-    <small id="hudDate">--.--.----</small>
-    <b id="hudTime">--:--</b>
-  </div>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<title>IRON // Personal Assistant</title>
+<link rel="stylesheet" href="style.css?v=650">
+</head>
+<body>
+<div class="grid"></div><div class="scanlines"></div>
+<header class="topbar">
+  <div class="brand"><span class="mark">I</span><div><b>IRON</b><small>PERSONAL SYSTEM</small></div></div>
+  <div class="status"><i></i> CLOUD <b id="cloudStatus">CONNECTING</b></div>
 </header>
-
-<main class="v7-main">
-<section class="v7-subtitle">DEIN KI-ASSISTENT. IMMER AN DEINER SEITE.</section>
-<section class="v7-metric-grid">
-<article><span>CPU</span><b>12%</b><div class="v7-bars"><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
-<article><span>SPEICHER</span><b>34%</b><div class="v7-bars alt"><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
-<article><span>NETZWERK</span><b>ACTIVE</b><div class="v7-wave"></div></article>
-<article><span>KI-KERNE</span><b id="cloudStatus">CONNECTING</b><div class="v7-bars small"><i></i><i></i><i></i><i></i><i></i></div></article>
-</section>
-<section class="v7-core-grid">
-<aside class="v7-panel v7-command-modules">
-<div class="v7-panel-title">SYSTEM MODULE</div>
-<button data-command="Analysiere meinen heutigen Tag"><strong>◎</strong><span>ANALYSIERE<small>DATEN</small></span></button>
-<button onclick="location.href='plans.html'"><strong>▣</strong><span>PLANE<small>AUFGABEN</small></span></button>
-<button data-command="Sag mir die wichtigsten News"><strong>⌕</strong><span>RECHERCHIERE<small>WISSEN</small></span></button>
-<button onclick="location.href='task.html'"><strong>◇</strong><span>ASSISTIERE<small>ALLTAG</small></span></button>
-<button onclick="location.href='photos.html'"><strong>⚙</strong><span>VISUALISIERE<small>BILDER</small></span></button>
-</aside>
-<section class="v7-reactor-zone">
-<div class="v7-reactor-label top">ZUHÖREN</div>
-<div class="v7-reactor"><div class="v7-orbit o1"></div><div class="v7-orbit o2"></div><div class="v7-orbit o3"></div><div class="v7-orbit o4"></div>
-<div class="v7-reactor-face"><span>IRON</span><small>AI CORE</small></div></div>
-<div class="v7-reactor-label left">DENKEN</div><div class="v7-reactor-label right">ANALYSIEREN</div><div class="v7-reactor-label bottom">ANTWORTEN</div>
-<div id="voiceStatus" class="v7-core-status">STANDBY</div>
-</section>
-<aside class="v7-panel v7-system-panel">
-<div class="v7-panel-title">SYSTEMSTATUS</div><p><i></i> KI ONLINE</p><p><i></i> SPRACHMODUL</p><p><i></i> DATENZUGRIFF</p><p><i></i> SYSTEME OK</p><p><i></i> BEREIT</p>
-<div class="v7-globe"><span>◎</span></div><small>WELTWEIT VERBUNDEN</small>
-</aside>
+<main>
+<section class="hero">
+  <div class="eyebrow">IRON // BEREIT</div>
+  <h1>IRON <span>ASSISTENT</span></h1>
+  <p>Sprache, Aufgaben und aktuelle Informationen an einem Ort.</p>
+  <button class="voice" id="voiceBtn"><em></em><strong>⌁</strong><small>SPRECHEN</small></button>
+  <div class="command"><span>&gt;</span><input id="commandInput" placeholder="Befehl eingeben..." autocomplete="off"><button id="sendBtn">SENDEN</button></div>
+  <div id="response">System bereit.</div>
+  <section class="answer-panel">
+    <div class="answer-head"><span>IRON ANTWORT</span><b id="speechStatus">READY</b></div>
+    <div id="answerText">Antworten von IRON erscheinen hier immer als Text – auch wenn die Sprachausgabe nicht funktioniert.</div>
+  </section>
 </section>
 
-<section class="v7-home-shortcuts">
-  <button onclick="location.href='calendar.html'"><strong>▦</strong><span>KALENDER<small>TERMINE & ERINNERUNGEN</small></span></button>
-  <button onclick="location.href='task.html'"><strong>✓</strong><span>TASKS<small>AUFGABEN & HINWEISE</small></span></button>
-  <button onclick="location.href='bilder.html'"><strong>▧</strong><span>BILDER<small>APPWRITE GALERIE</small></span></button>
-  <button onclick="location.href='photos.html'"><strong>▣</strong><span>FOTO-ANALYSE<small>IRON VISION</small></span></button>
-</section>
-<section class="v7-dashboard-grid">
-<article class="v7-panel v7-feed"><div class="v7-panel-title">NACHRICHTEN <button id="newsBtn">MEHR ›</button></div><div id="hudNews" class="hud-live-list"><p>Wichtige Weltnachrichten laden.</p></div></article>
-<article class="v7-panel v7-weather-card"><div class="v7-panel-title">WETTER</div><div class="v7-weather-icon">◒</div><b id="v7WeatherTemp">--°C</b><span id="v7WeatherText">Luxemburg</span><button id="v7WeatherBtn">AKTUALISIEREN</button></article>
-<article class="v7-panel v7-stocks"><div class="v7-panel-title">AKTIEN <button id="stocksBtn">MEHR ›</button></div><div id="hudStocks" class="hud-live-list"><p>Kurse laden.</p></div></article>
-</section>
-<section class="v7-greeting"><span>Hallo.</span><p>Wobei kann ich dir heute helfen?</p></section>
-
-<section class="v7-assistant">
-  <div id="response" class="v7-assistant-response">System bereit.</div>
-  <div id="answerText" class="v7-answer-text">Antworten von IRON erscheinen hier als Text.</div>
-  <div class="v7-commandbar">
-    <span class="v7-keyboard">⌨</span>
-    <input id="commandInput" placeholder="Nachricht an IRON ..." autocomplete="off">
-    <button id="voiceBtn" class="v7-mic" aria-label="Mit IRON sprechen">◉</button>
-    <button id="sendBtn" class="v7-send" aria-label="Senden">➤</button>
+<section>
+  <div class="title">ÜBERSICHT <i></i></div>
+  <div class="cards">
+    <button data-command="Erstelle einen Tagesplan"><b>◫</b><strong>PLÄNE</strong><small>Tages- & Wochenplanung</small></button>
+    <button data-command="Öffne meinen Sportplan"><b>◈</b><strong>SPORT</strong><small>Training & Aktivitäten</small></button>
+    <button data-command="Öffne meine Finanzen"><b>◇</b><strong>FINANZEN</strong><small>Übersicht & Planung</small></button>
+    <button onclick="location.href='einkaufsliste.html'"><b>□</b><strong>EINKAUF</strong><small>Listen & Aufgaben</small></button>
+    <button onclick="location.href='hud.html'"><b>◎</b><strong>HUD</strong><small>IRON Übersicht</small></button>
+    <button class="world-feature" onclick="location.href='world.html'"><b>◉</b><strong>WELT & NEWS</strong><small>Länder wählen und aktuelle Nachrichten ansehen</small></button>
+    <button onclick="location.href='photos.html'"><b>▣</b><strong>FOTOS</strong><small>Bilder ansehen</small></button>
   </div>
-  <b id="speechStatus" class="v7-speech-status">READY</b>
 </section>
 
-<section class="v7-quick-row">
-<button data-command="Gib mir eine schnelle Antwort auf meine letzte Frage">☆ <span>Schnelle Antwort</span></button>
-<button data-command="Fasse meine wichtigsten Mails zusammen">▤ <span>Zusammenfassen</span></button>
-<button data-command="Gib mir drei Ideen für heute">◉ <span>Ideen finden</span></button>
-<button onclick="document.getElementById('ironHamburger')?.click()">▦ <span>Mehr</span></button>
+<section>
+  <div class="title">SCHNELLAKTIONEN <i></i></div>
+  <div class="quick">
+    <button data-command="Erstelle einen neuen Plan">+ PLAN</button>
+    <button id="uploadBtn">↑ BILD</button>
+    <button data-command="Zeige meinen Status">SYSTEM</button>
+  </div>
+  <input id="imageInput" type="file" accept="image/*" hidden>
+</section>
+
+<section class="system">
+  <header>VERBINDUNGEN</header>
+  <div><p>CLOUD<b id="cloudStatusFooter">CONNECTING</b></p><p>STIMME<b id="voiceStatus">STANDBY</b></p><p>PC AGENT<b id="pcStatus" class="offline">OFFLINE</b></p></div>
 </section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
-<script src="iron-appwrite.js?v=700"></script>
 
-<script src="app.js?v=700"></script>
-<script src="mobile-bridge.js?v=700"></script>
-<script src="iron-menu.js?v=700"></script>
-<script src="iron-v7-ui.js?v=700"></script>
-</body></html>
+<section class="iron-window" id="plansWindow"><div class="window-inner"><div class="window-top"><h2>PLANS // IRON</h2><button id="closePlans">×</button></div><div id="plansList"></div></div></section>
+<section class="iron-window" id="tasksWindow"><div class="window-inner"><div class="window-top"><h2>TASKS // IRON</h2><button id="closeTasks">×</button></div><div id="tasksList"></div></div></section>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=620"></script>
+<script src="app.js?v=650"></script>
+<script src="mobile-bridge.js?v=620"></script>
+<script src="iron-menu.js?v=650"></script>
+</body>
+</html>

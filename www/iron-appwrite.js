@@ -157,7 +157,7 @@
             message,
             userJwt: token.jwt,
             source: (window.IRONMobile?.isNative ? "android" : "web"),
-            conversation_id: "main"
+            conversation_id: (window.IRONMobile?.isNative ? "mobile-main" : "web-main")
           })
         });
       }
