@@ -6,6 +6,10 @@ import android.database.Cursor;
 import android.provider.ContactsContract;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.telephony.SmsManager;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
+import java.util.ArrayList;
 
 import androidx.core.app.ActivityCompat;
 
@@ -21,11 +25,80 @@ import com.getcapacitor.annotation.CapacitorPlugin;
         @com.getcapacitor.annotation.Permission(
             alias = "contacts",
             strings = { android.Manifest.permission.READ_CONTACTS }
+        ),
+        @com.getcapacitor.annotation.Permission(
+            alias = "sms",
+            strings = { android.Manifest.permission.SEND_SMS }
+        ),
+        @com.getcapacitor.annotation.Permission(
+            alias = "phoneState",
+            strings = { android.Manifest.permission.READ_PHONE_STATE }
         )
     }
 )
 public class IronPhonePlugin extends Plugin {
     private static final int CALL_PERMISSION_REQUEST = 9412;
+
+    @PluginMethod
+    public void composeSms(PluginCall call) {
+        String number = clean(call.getString("number", ""));
+        String message = call.getString("message", "");
+        if (number.isEmpty() || message.trim().isEmpty()) { call.reject("Nummer und SMS-Text fehlen."); return; }
+        Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + number));
+        intent.putExtra("sms_body", message);
+        try { getActivity().startActivity(intent); call.resolve(); }
+        catch (Exception ex) { call.reject("Keine SMS-App verfügbar.", ex); }
+    }
+
+    @PluginMethod
+    public void sendSms(PluginCall call) {
+        String number = clean(call.getString("number", ""));
+        String message = call.getString("message", "");
+        int slot = call.getInt("slot", 1);
+        if (number.isEmpty() || message.trim().isEmpty()) { call.reject("Nummer und SMS-Text fehlen."); return; }
+        if (slot != 1 && slot != 2) { call.reject("SIM-Auswahl ungültig."); return; }
+        if (androidx.core.content.ContextCompat.checkSelfPermission(getContext(), Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissionForAlias("sms", call, "smsPermsCallback");
+            return;
+        }
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED) { requestPermissionForAlias("phoneState", call, "phoneStatePermsCallback"); return; }
+        deliverSms(call, number, message, slot);
+    }
+
+    @com.getcapacitor.annotation.PermissionCallback
+    private void smsPermsCallback(PluginCall call) {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(getContext(), Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED) { call.reject("SMS-Berechtigung wurde nicht erteilt."); return; }
+        sendSms(call);
+    }
+
+    @com.getcapacitor.annotation.PermissionCallback
+    private void phoneStatePermsCallback(PluginCall call) {
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED) { call.reject("SIM-Berechtigung wurde nicht erteilt."); return; }
+        sendSms(call);
+    }
+
+    private void deliverSms(PluginCall call, String number, String message, int slot) {
+        try {
+            SubscriptionManager subscriptions = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+            java.util.List<SubscriptionInfo> active = subscriptions == null ? null : subscriptions.getActiveSubscriptionInfoList();
+            SubscriptionInfo selected = null;
+            if (active != null) for (SubscriptionInfo info : active) {
+                if (info.getSimSlotIndex() == slot-1) { selected = info; break; }
+            }
+            if (selected == null) { call.reject("Die gewählte SIM ist nicht aktiv."); return; }
+            SmsManager manager = SmsManager.getSmsManagerForSubscriptionId(selected.getSubscriptionId());
+            ArrayList<String> parts = manager.divideMessage(message);
+            if (parts.size() == 1) manager.sendTextMessage(number, null, message, null, null);
+            else manager.sendMultipartTextMessage(number, null, parts, null, null);
+            JSObject result = new JSObject();
+            result.put("accepted", true);
+            call.resolve(result);
+        } catch (Exception ex) { call.reject("SMS konnte nicht an Android übergeben werden: " + ex.getMessage(), ex); }
+    }
 
     private String clean(String number) {
         if (number == null) return "";

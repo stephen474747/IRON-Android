@@ -7,6 +7,7 @@
     ["plans.html","◫","PLÄNE"],
     ["einkaufsliste.html","□","EINKAUF"],
     ["task.html","✓","TASKS"],
+    ["sms.html","✉","SMS"],
     ["diagnostics.html","⚙","DIAGNOSE"]
   ];
 
@@ -27,24 +28,25 @@
     button.className="iron-hamburger";
     button.setAttribute("aria-label","IRON Menü öffnen");
     button.setAttribute("aria-expanded","false");
+    button.setAttribute("aria-controls","ironMenuOverlay");
     button.innerHTML="<span></span><span></span><span></span>";
 
     const overlay=document.createElement("div");
     overlay.id="ironMenuOverlay";
     overlay.className="iron-menu-overlay";
     overlay.innerHTML=`
-      <aside class="iron-menu-drawer" role="dialog" aria-label="IRON Navigation">
+      <aside class="iron-menu-drawer" role="dialog" aria-modal="true" aria-label="Alle IRON Bildschirme">
         <header>
-          <div><b>IRON</b><small>NAVIGATION SYSTEM</small></div>
+          <div><b>IRON</b><small>ALLE BILDSCHIRME</small></div>
           <button class="iron-menu-close" aria-label="Menü schließen">×</button>
         </header>
         <nav class="iron-menu-links">
           ${ITEMS.map(([href,icon,label])=>`
-            <a href="${href}" class="${currentName()===href?"active":""}">
+            <a href="${href}" class="${currentName()===href?"active":""}" ${currentName()===href?'aria-current="page"':''}>
               <span>${icon}</span><b>${label}</b>
             </a>`).join("")}
         </nav>
-        <footer>IRON // MOBILE SYSTEM</footer>
+        <footer>Tippe auf einen Bildschirm</footer>
       </aside>`;
 
     const close=()=>{
@@ -52,12 +54,15 @@
       button.classList.remove("open");
       button.setAttribute("aria-expanded","false");
       document.body.classList.remove("iron-menu-open");
+      button.focus();
     };
     const open=()=>{
       overlay.classList.add("open");
       button.classList.add("open");
       button.setAttribute("aria-expanded","true");
       document.body.classList.add("iron-menu-open");
+      if(document.activeElement?.blur) document.activeElement.blur();
+      overlay.querySelector(".iron-menu-links a")?.focus();
     };
 
     button.onclick=()=>overlay.classList.contains("open")?close():open();

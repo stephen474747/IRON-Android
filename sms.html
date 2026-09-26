@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#06111d"><title>IRON · SMS</title>
+<link rel="stylesheet" href="style.css?v=660"></head>
+<body>
+<header class="topbar"><a class="brand" href="index.html"><span class="mark">I</span><div><b>IRON</b><small>SMS</small></div></a><div class="status">ANDROID</div></header>
+<main class="page-main sms-page">
+ <section class="page-heading"><div class="eyebrow">IRON // KOMMUNIKATION</div><h1>SMS<span>.</span></h1><p>Schreibe eine Nachricht oder empfange Aufträge vom PC.</p></section>
+ <section class="sms-card"><h2>Neue SMS</h2><label for="smsNumber">Empfänger</label><input id="smsNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+352 ..."><label for="smsMessage">Nachricht</label><textarea id="smsMessage" rows="5" maxlength="5000" placeholder="Deine Nachricht"></textarea><label for="smsSlot">SIM</label><select id="smsSlot"><option value="1">SIM 1</option><option value="2">SIM 2</option></select><div class="sms-actions"><button id="smsCompose">IN SMS-APP ÖFFNEN</button><button id="smsSend">DIREKT SENDEN</button></div><small>Direkt senden benötigt die SMS- und SIM-Berechtigung. „In SMS-App öffnen“ zeigt den Text vor dem Versand.</small></section>
+ <section class="sms-card"><h2>PC-Verbindung</h2><p id="smsStatus" role="status">Prüfe Verbindung...</p><button id="smsPair">MIT PC KOPPELN / AUFTRÄGE PRÜFEN</button><small>Für automatische PC-Aufträge müssen die IRON-App und der PC-Agent laufen. Android prüft neue Aufträge, solange die App geöffnet ist. Der Cloud-Dienst benötigt den geheimen Relay-Token.</small></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script><script src="iron-appwrite.js?v=660"></script><script src="app.js?v=660"></script><script src="mobile-bridge.js?v=660"></script><script src="sms.js?v=660"></script><script src="iron-menu.js?v=660"></script>
+</body></html>

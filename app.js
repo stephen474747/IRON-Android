@@ -122,6 +122,7 @@ function cleanTextForSpeech(value){
 }
 
 function speak(text){
+  window.ironSetActivity?.('speaking');
   if(window.IRONMobile?.isNative && typeof window.IRONMobile.speak === "function"){
     const p=Promise.resolve(window.IRONMobile.speak(cleanTextForSpeech(text)));
     window.__ironLastSpeechPromise=p;
@@ -152,11 +153,13 @@ function speak(text){
     if(state) state.textContent="SPEAKING";
 
     utterance.onend=()=>{
+      window.ironSetActivity?.('ready');
       const el=document.querySelector("#voiceState");
       if(el) el.textContent="READY";
     };
 
     utterance.onerror=()=>{
+      window.ironSetActivity?.('ready');
       const el=document.querySelector("#voiceState");
       if(el) el.textContent="TEXT ONLY";
     };
@@ -224,8 +227,8 @@ window.ironLogout = async()=>{ await cloud.logout(); location.reload(); };
 
 // ---------- STATUS ----------
 function setCloudStatus(ok){
-  const el = $("#cloudStatus");
-  if(el){
+  for(const el of [$("#cloudStatus"),$("#cloudStatusFooter")]){
+    if(!el) continue;
     el.textContent = ok ? "ONLINE" : "OFFLINE";
     el.classList.toggle("offline", !ok);
   }
@@ -1212,9 +1215,11 @@ async function queuePCCommand(t){
 async function command(t){
   t=(t||"").trim();
   if(!t)return;
+  window.ironSetActivity?.('thinking');
   if(/was gibt es neues|was ist neu|welt(?:karte|nachrichten|news)?|globus|3d erde/i.test(t)
      || /(?:nachrichten|news)\s+(?:aus|von|zu|über|ueber)\s+[A-Za-zÀ-ÿ]/i.test(t)){
-    location.href="world.html";return;
+    const country=t.match(/(?:nachrichten|news)\s+(?:aus|von|zu|über|ueber)\s+(.+?)\s*[.!?]?$/i);
+    location.href=country?`world.html?country=${encodeURIComponent(country[1].trim())}`:"world.html";return;
   }
   if(!currentUser) return;
   if(input) input.value="";
@@ -1331,6 +1336,8 @@ Nutze klare Abschnitte, sinnvolle Schritte und – falls passend – Tage oder T
     const code = e?.code ? ` [${e.code}]` : "";
     show("Cloud-Fehler" + code + ": " + (e?.message||e));
     console.error("IRON cloud error", e);
+  }finally{
+    if(document.body.dataset.ironActivity==='thinking') window.ironSetActivity?.('ready');
   }
 }
 
@@ -1413,6 +1420,7 @@ if(SR&&voiceBtn){
   recognition.maxAlternatives=1;
 
   recognition.onstart=()=>{
+    window.ironSetActivity?.('listening');
     voiceBtn.classList.add('listening');
     if(voiceStatus) voiceStatus.textContent='LISTENING';
     show('Ich höre zu...');
@@ -1423,11 +1431,13 @@ if(SR&&voiceBtn){
   };
 
   recognition.onend=()=>{
+    if(document.body.dataset.ironActivity==='listening') window.ironSetActivity?.('ready');
     voiceBtn.classList.remove('listening');
     if(voiceStatus) voiceStatus.textContent='STANDBY';
   };
 
   recognition.onerror=e=>{
+    window.ironSetActivity?.('ready');
     voiceBtn.classList.remove('listening');
     if(voiceStatus) voiceStatus.textContent='ERROR';
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent) ||

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#02070c">
 <title>IRON // HUD</title>
-<link rel="stylesheet" href="style.css?v=620">
+<link rel="stylesheet" href="style.css?v=650">
 </head>
 <body class="hud-body">
 <div class="grid hud-grid"></div><div class="scanlines"></div>
@@ -35,13 +35,16 @@
   <section class="hud-center">
     <div class="hud-system-title">I R O N&nbsp;&nbsp; S Y S T E M</div>
     <div class="reactor">
+      <div class="iron-pulse" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="reactor-ring r1"></div>
       <div class="reactor-ring r2"></div>
       <div class="reactor-ring r3"></div>
       <div class="reactor-core"><span>I</span></div>
     </div>
     <div class="hud-voice-state" id="voiceStatus">STANDBY</div>
+    <div class="iron-activity-label" id="ironActivityLabel" aria-live="polite">BEREIT</div>
     <button class="hud-talk" id="voiceBtn">⌁ TALK TO IRON</button>
+    <a class="iron-sms-shortcut" href="sms.html">✉ SMS</a>
 
     <div class="hud-command command">
       <span>&gt;</span><input id="commandInput" placeholder="IRON Befehl..." autocomplete="off"><button id="sendBtn">SEND</button>
@@ -111,8 +114,9 @@
 <script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
 <script src="iron-appwrite.js?v=620"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="app.js?v=620"></script>
+<script src="iron-pulse.js?v=660"></script>
+<script src="app.js?v=660"></script>
 <script src="mobile-bridge.js?v=620"></script>
-<script src="iron-menu.js?v=620"></script>
+<script src="iron-menu.js?v=650"></script>
 </body>
 </html>
