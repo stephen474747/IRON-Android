@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02070b"><title>IRON // News-Welt</title>
+<link rel="stylesheet" href="style.css?v=750">
+<script defer src="https://unpkg.com/globe.gl/dist/globe.gl.min.js"></script>
+</head><body class="v7 v7-world"><div class="grid"></div><div class="scanlines"></div>
+<header class="v7-header"><div class="v7-header-spacer"></div>
+<a class="v7-logo" href="index.html"><span>I</span><span>R</span><i>O</i><span>N</span><small>NEWS-WELT</small></a>
+<div class="v7-clockbox"><small id="hudDate">--.--.----</small><b id="hudTime">--:--</b></div></header>
+<main class="v7-main">
+<section class="v7-subtitle">LAND AUSWÄHLEN // NUR DESSEN AKTUELLE MELDUNGEN LADEN</section>
+<section class="v7-world-layout">
+ <div class="v7-panel v7-world-map"><div class="v7-panel-title">INTERAKTIVE ERDE <button id="worldReset" type="button">WELTANSICHT</button></div>
+  <div id="worldGlobe" aria-label="Interaktive 3D-Weltkarte"></div>
+  <p id="worldMapStatus">Erde wird geladen. Ein Land kann jederzeit unten ausgewählt werden.</p>
+  <p class="v7-world-help">Mit dem Finger drehen · Zwei Finger zum Zoomen · Land antippen</p>
+ </div>
+ <section class="v7-panel v7-world-detail">
+  <div class="v7-panel-title">NACHRICHTEN <span id="worldCountryLabel">LAND WÄHLEN</span></div>
+  <div class="v7-world-selector"><label for="worldCountryInput">Land suchen oder eingeben</label><input id="worldCountryInput" list="worldCountryList" placeholder="z. B. Luxemburg" autocomplete="off"><datalist id="worldCountryList"></datalist><button id="worldChoose" type="button">ANZEIGEN</button></div>
+  <div id="worldNewsStatus" role="status" aria-live="polite">Wähle ein Land auf der Erde oder gib den Namen ein. Nachrichten werden erst danach geladen.</div>
+  <div class="v7-world-actions"><button id="worldSummarize" type="button" disabled>IRON ZUSAMMENFASSEN</button><button id="worldRead" type="button" disabled>VORLESEN</button></div>
+  <div id="worldSummary" aria-live="polite"></div><div id="worldArticles"></div>
+ </section>
+</section>
+<section class="v7-assistant"><div id="response" class="v7-assistant-response">Frage IRON nach einem Land.</div><div id="answerText" class="v7-answer-text"></div>
+<div class="v7-commandbar"><span class="v7-keyboard">⌨</span><input id="commandInput" placeholder="z. B. Nachrichten aus Luxemburg" autocomplete="off"><button id="voiceBtn" class="v7-mic" aria-label="Mit IRON sprechen">◉</button><button id="sendBtn" class="v7-send" aria-label="Befehl senden">➤</button></div><b id="speechStatus" class="v7-speech-status">READY</b></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script><script src="iron-appwrite.js?v=740"></script>
+<script src="app.js?v=750"></script><script src="mobile-bridge.js?v=740"></script>
+<script src="iron-menu.js?v=750"></script><script src="iron-v7-ui.js?v=740"></script><script src="welt-news.js?v=750"></script>
+</body></html>
