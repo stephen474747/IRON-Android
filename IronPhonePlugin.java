@@ -9,96 +9,39 @@ import android.net.Uri;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
-import java.util.ArrayList;
 
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.PermissionCallback;
 
 @CapacitorPlugin(
     name = "IronPhone",
     permissions = {
         @com.getcapacitor.annotation.Permission(
             alias = "contacts",
-            strings = { android.Manifest.permission.READ_CONTACTS }
+            strings = { Manifest.permission.READ_CONTACTS }
         ),
         @com.getcapacitor.annotation.Permission(
             alias = "sms",
-            strings = { android.Manifest.permission.SEND_SMS }
-        ),
-        @com.getcapacitor.annotation.Permission(
-            alias = "phoneState",
-            strings = { android.Manifest.permission.READ_PHONE_STATE }
+            strings = {
+                Manifest.permission.SEND_SMS,
+                Manifest.permission.READ_PHONE_STATE
+            }
         )
     }
 )
 public class IronPhonePlugin extends Plugin {
     private static final int CALL_PERMISSION_REQUEST = 9412;
-
-    @PluginMethod
-    public void composeSms(PluginCall call) {
-        String number = clean(call.getString("number", ""));
-        String message = call.getString("message", "");
-        if (number.isEmpty() || message.trim().isEmpty()) { call.reject("Nummer und SMS-Text fehlen."); return; }
-        Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + number));
-        intent.putExtra("sms_body", message);
-        try { getActivity().startActivity(intent); call.resolve(); }
-        catch (Exception ex) { call.reject("Keine SMS-App verfügbar.", ex); }
-    }
-
-    @PluginMethod
-    public void sendSms(PluginCall call) {
-        String number = clean(call.getString("number", ""));
-        String message = call.getString("message", "");
-        int slot = call.getInt("slot", 1);
-        if (number.isEmpty() || message.trim().isEmpty()) { call.reject("Nummer und SMS-Text fehlen."); return; }
-        if (slot != 1 && slot != 2) { call.reject("SIM-Auswahl ungültig."); return; }
-        if (androidx.core.content.ContextCompat.checkSelfPermission(getContext(), Manifest.permission.SEND_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestPermissionForAlias("sms", call, "smsPermsCallback");
-            return;
-        }
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.READ_PHONE_STATE)
-                != PackageManager.PERMISSION_GRANTED) { requestPermissionForAlias("phoneState", call, "phoneStatePermsCallback"); return; }
-        deliverSms(call, number, message, slot);
-    }
-
-    @com.getcapacitor.annotation.PermissionCallback
-    private void smsPermsCallback(PluginCall call) {
-        if (androidx.core.content.ContextCompat.checkSelfPermission(getContext(), Manifest.permission.SEND_SMS)
-                != PackageManager.PERMISSION_GRANTED) { call.reject("SMS-Berechtigung wurde nicht erteilt."); return; }
-        sendSms(call);
-    }
-
-    @com.getcapacitor.annotation.PermissionCallback
-    private void phoneStatePermsCallback(PluginCall call) {
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.READ_PHONE_STATE)
-                != PackageManager.PERMISSION_GRANTED) { call.reject("SIM-Berechtigung wurde nicht erteilt."); return; }
-        sendSms(call);
-    }
-
-    private void deliverSms(PluginCall call, String number, String message, int slot) {
-        try {
-            SubscriptionManager subscriptions = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
-            java.util.List<SubscriptionInfo> active = subscriptions == null ? null : subscriptions.getActiveSubscriptionInfoList();
-            SubscriptionInfo selected = null;
-            if (active != null) for (SubscriptionInfo info : active) {
-                if (info.getSimSlotIndex() == slot-1) { selected = info; break; }
-            }
-            if (selected == null) { call.reject("Die gewählte SIM ist nicht aktiv."); return; }
-            SmsManager manager = SmsManager.getSmsManagerForSubscriptionId(selected.getSubscriptionId());
-            ArrayList<String> parts = manager.divideMessage(message);
-            if (parts.size() == 1) manager.sendTextMessage(number, null, message, null, null);
-            else manager.sendMultipartTextMessage(number, null, parts, null, null);
-            JSObject result = new JSObject();
-            result.put("accepted", true);
-            call.resolve(result);
-        } catch (Exception ex) { call.reject("SMS konnte nicht an Android übergeben werden: " + ex.getMessage(), ex); }
-    }
 
     private String clean(String number) {
         if (number == null) return "";
@@ -128,9 +71,9 @@ public class IronPhonePlugin extends Plugin {
         if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CALL_PHONE)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
-                    getActivity(),
-                    new String[]{Manifest.permission.CALL_PHONE},
-                    CALL_PERMISSION_REQUEST
+                getActivity(),
+                new String[]{Manifest.permission.CALL_PHONE},
+                CALL_PERMISSION_REQUEST
             );
             JSObject ret = new JSObject();
             ret.put("permissionRequested", true);
@@ -152,9 +95,9 @@ public class IronPhonePlugin extends Plugin {
             return;
         }
 
-        if (androidx.core.content.ContextCompat.checkSelfPermission(
-                getContext(), android.Manifest.permission.READ_CONTACTS)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.READ_CONTACTS)
+                != PackageManager.PERMISSION_GRANTED) {
             requestPermissionForAlias("contacts", call, "contactsPermsCallback");
             return;
         }
@@ -162,11 +105,11 @@ public class IronPhonePlugin extends Plugin {
         resolveContact(call, wanted);
     }
 
-    @com.getcapacitor.annotation.PermissionCallback
+    @PermissionCallback
     private void contactsPermsCallback(PluginCall call) {
-        if (androidx.core.content.ContextCompat.checkSelfPermission(
-                getContext(), android.Manifest.permission.READ_CONTACTS)
-                == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.READ_CONTACTS)
+                == PackageManager.PERMISSION_GRANTED) {
             resolveContact(call, call.getString("name", ""));
         } else {
             call.reject("Kontakte-Berechtigung wurde nicht erteilt.");
@@ -202,4 +145,164 @@ public class IronPhonePlugin extends Plugin {
         }
     }
 
+    private boolean smsPermitted() {
+        return ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.SEND_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        && ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.READ_PHONE_STATE
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @PluginMethod
+    public void startSmsRelay(PluginCall call) {
+        if (!smsPermitted()) {
+            requestPermissionForAlias("sms", call, "smsRelayPermsCallback");
+            return;
+        }
+        startRelay(call);
+    }
+
+    @PermissionCallback
+    private void smsRelayPermsCallback(PluginCall call) {
+        if (smsPermitted()) startRelay(call);
+        else call.reject("SMS-/SIM-Berechtigung wurde nicht erteilt.");
+    }
+
+    private void startRelay(PluginCall call) {
+        String token = call.getString("token", "");
+        if (!token.matches("[A-Za-z0-9_-]{20,1000}\\.[A-Za-z0-9_-]{40,100}")) {
+            call.reject("Geräteanmeldung ungültig.");return;
+        }
+        try {
+            getContext().getSharedPreferences(IronSmsRelayService.PREF, android.content.Context.MODE_PRIVATE)
+                    .edit().putString("token", token).commit();
+            ContextCompat.startForegroundService(getContext(),
+                    new Intent(getContext(), IronSmsRelayService.class));
+            JSObject ret = new JSObject();ret.put("ok", true);call.resolve(ret);
+        } catch (Exception error) { call.reject("SMS-Hintergrunddienst konnte nicht starten: " + error.getMessage(), error); }
+    }
+
+    @PluginMethod
+    public void stopSmsRelay(PluginCall call) {
+        getContext().getSharedPreferences(IronSmsRelayService.PREF, android.content.Context.MODE_PRIVATE)
+                .edit().remove("token").commit();
+        getContext().stopService(new Intent(getContext(), IronSmsRelayService.class));
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void getSims(PluginCall call) {
+        if (!smsPermitted()) {
+            requestPermissionForAlias("sms", call, "smsListPermsCallback");
+            return;
+        }
+        doGetSims(call);
+    }
+
+    @PermissionCallback
+    private void smsListPermsCallback(PluginCall call) {
+        if (smsPermitted()) doGetSims(call);
+        else call.reject("SMS-/SIM-Berechtigung wurde nicht erteilt.");
+    }
+
+    private void doGetSims(PluginCall call) {
+        try {
+            SubscriptionManager sm = SubscriptionManager.from(getContext());
+            List<SubscriptionInfo> list = sm.getActiveSubscriptionInfoList();
+            JSArray sims = new JSArray();
+
+            if (list != null) {
+                for (SubscriptionInfo info : list) {
+                    JSObject x = new JSObject();
+                    x.put("slot", info.getSimSlotIndex() + 1);
+                    x.put("subscriptionId", info.getSubscriptionId());
+                    x.put("carrier", String.valueOf(info.getCarrierName()));
+                    x.put("displayName", String.valueOf(info.getDisplayName()));
+                    sims.put(x);
+                }
+            }
+
+            JSObject ret = new JSObject();
+            ret.put("sims", sims);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("SIMs konnten nicht gelesen werden: " + e.getMessage(), e);
+        }
+    }
+
+    @PluginMethod
+    public void sendSms(PluginCall call) {
+        if (!smsPermitted()) {
+            requestPermissionForAlias("sms", call, "smsSendPermsCallback");
+            return;
+        }
+        doSendSms(call);
+    }
+
+    @PermissionCallback
+    private void smsSendPermsCallback(PluginCall call) {
+        if (smsPermitted()) doSendSms(call);
+        else call.reject("SMS-/SIM-Berechtigung wurde nicht erteilt.");
+    }
+
+    private void doSendSms(PluginCall call) {
+        String number = clean(call.getString("number", ""));
+        String message = call.getString("message", "");
+        Integer requestedSlot = call.getInt("simSlot", 1);
+
+        if (number.isEmpty()) {
+            call.reject("Keine Zielnummer angegeben.");
+            return;
+        }
+        if (message == null || message.trim().isEmpty()) {
+            call.reject("SMS-Text ist leer.");
+            return;
+        }
+
+        try {
+            SubscriptionManager subManager = SubscriptionManager.from(getContext());
+            List<SubscriptionInfo> infos = subManager.getActiveSubscriptionInfoList();
+
+            int wantedSlot = Math.max(1, Math.min(2, requestedSlot == null ? 1 : requestedSlot));
+            SubscriptionInfo selected = null;
+
+            if (infos != null) {
+                for (SubscriptionInfo info : infos) {
+                    if (info.getSimSlotIndex() + 1 == wantedSlot) {
+                        selected = info;
+                        break;
+                    }
+                }
+                if (selected == null && infos.size() == 1) {
+                    selected = infos.get(0);
+                }
+            }
+
+            SmsManager sms;
+            int actualSlot = wantedSlot;
+            if (selected != null) {
+                sms = SmsManager.getSmsManagerForSubscriptionId(selected.getSubscriptionId());
+                actualSlot = selected.getSimSlotIndex() + 1;
+            } else {
+                sms = SmsManager.getDefault();
+            }
+
+            ArrayList<String> parts = sms.divideMessage(message);
+            if (parts.size() > 1) {
+                sms.sendMultipartTextMessage(number, null, parts, null, null);
+            } else {
+                sms.sendTextMessage(number, null, message, null, null);
+            }
+
+            JSObject ret = new JSObject();
+            ret.put("ok", true);
+            ret.put("number", number);
+            ret.put("simSlot", actualSlot);
+            ret.put("parts", parts.size());
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("SMS konnte nicht gesendet werden: " + e.getMessage(), e);
+        }
+    }
 }

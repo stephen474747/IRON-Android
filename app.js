@@ -122,7 +122,6 @@ function cleanTextForSpeech(value){
 }
 
 function speak(text){
-  window.ironSetActivity?.('speaking');
   if(window.IRONMobile?.isNative && typeof window.IRONMobile.speak === "function"){
     const p=Promise.resolve(window.IRONMobile.speak(cleanTextForSpeech(text)));
     window.__ironLastSpeechPromise=p;
@@ -153,13 +152,11 @@ function speak(text){
     if(state) state.textContent="SPEAKING";
 
     utterance.onend=()=>{
-      window.ironSetActivity?.('ready');
       const el=document.querySelector("#voiceState");
       if(el) el.textContent="READY";
     };
 
     utterance.onerror=()=>{
-      window.ironSetActivity?.('ready');
       const el=document.querySelector("#voiceState");
       if(el) el.textContent="TEXT ONLY";
     };
@@ -227,8 +224,8 @@ window.ironLogout = async()=>{ await cloud.logout(); location.reload(); };
 
 // ---------- STATUS ----------
 function setCloudStatus(ok){
-  for(const el of [$("#cloudStatus"),$("#cloudStatusFooter")]){
-    if(!el) continue;
+  const el = $("#cloudStatus");
+  if(el){
     el.textContent = ok ? "ONLINE" : "OFFLINE";
     el.classList.toggle("offline", !ok);
   }
@@ -1018,10 +1015,18 @@ async function createCalendarFromCommand(raw){
   }
   const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Luxembourg";
   const parsed=await postIronJSON("/api/calendar/parse",{text:raw,now:new Date().toISOString(),timezone});
+  parsed.event.important=/\b(wichtig|sehr wichtig|dringend|unbedingt)\b/i.test(String(raw||""));
+  if(parsed.event.important && !Number.isFinite(Number(parsed.event.reminder_minutes))){
+    parsed.event.reminder_minutes=15;
+  }
   await window.IRONMobile.createCalendarEvent(parsed.event);
   const when=new Date(parsed.event.start).toLocaleString("de-DE");
-  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.`;
+  const notifyText=parsed.event.important
+    ? " Ich erinnere Sie zusätzlich rechtzeitig mit einer wichtigen IRON-Benachrichtigung."
+    : " Ich erinnere Sie vorher mit einer IRON-Benachrichtigung.";
+  const msg=`Termin ${parsed.event.title} wurde für ${when} in deinen Kalender eingetragen.${notifyText}`;
   show(msg); await speak(msg);
+  window.dispatchEvent(new Event("iron-calendar-updated"));
   return parsed.event;
 }
 
@@ -1111,11 +1116,8 @@ function imageNameScore(name,q){
 }
 
 async function openPhotoLibraryItem(id){
-  show("IRON lädt das Foto aus Appwrite...");
-  const data=await ironImageGet(id,false);
-  if(!data?.image?.data_url) throw new Error("Bilddaten fehlen.");
-  currentCloudImage=data.image;
-  openImageStudio(data.image.data_url,data.image);
+  if(!id) return;
+  location.href=`photo-viewer.html?id=${encodeURIComponent(id)}`;
 }
 
 async function uploadPhotoLibraryFile(){
@@ -1213,18 +1215,11 @@ async function queuePCCommand(t){
   return row;
 }
 async function command(t){
-  t=(t||"").trim();
-  if(!t)return;
-  window.ironSetActivity?.('thinking');
-  if(/was gibt es neues|was ist neu|welt(?:karte|nachrichten|news)?|globus|3d erde/i.test(t)
-     || /(?:nachrichten|news)\s+(?:aus|von|zu|über|ueber)\s+[A-Za-zÀ-ÿ]/i.test(t)){
-    const country=t.match(/(?:nachrichten|news)\s+(?:aus|von|zu|über|ueber)\s+(.+?)\s*[.!?]?$/i);
-    location.href=country?`world.html?country=${encodeURIComponent(country[1].trim())}`:"world.html";return;
-  }
-  if(!currentUser) return;
+  t=(t||"").trim(); if(!t || !currentUser) return;
   if(input) input.value="";
   show("Befehl wird verarbeitet...");
   try{
+    if(location.pathname.endsWith('/welt-news.html') && window.ironWorldVoice?.(t)) return;
     if(calendarCommandRequested(t)){
       await createCalendarFromCommand(t);
       return;
@@ -1232,6 +1227,17 @@ async function command(t){
     if(mailSummaryRequested(t)){
       await summarizeImportantMails();
       return;
+    }
+    if(/was\s+gibt(?:\s+es|'?s)?\s+neues|was\s+ist\s+neu|(?:zeig|zeige|öffne|oeffne).{0,30}(?:welt|weltkarte|welt.?news)|(?:nachrichten|news)\s+(?:aus|von|für|fuer)\s+.+/i.test(t)){
+      const match=t.match(/\b(?:nachrichten|news)\s+(?:aus|von|für|fuer)\s+([\p{L} .'-]{2,70})/iu);
+      location.href="welt-news.html"+(match?"?country="+encodeURIComponent(match[1].trim()):"");
+      return;
+    }
+    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(kalender|termine|terminübersicht|terminuebersicht)\b/i.test(t)){
+      location.href="calendar.html"; return;
+    }
+    if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(bilder|galerie|bildschirm|foto galerie|fotogalerie)\b/i.test(t)){
+      location.href="bilder.html"; return;
     }
     // Pure navigation/read requests must never call an API route.
     if(/\b(öffne|oeffne|zeig|zeige|anzeigen|geh|gehe)\b.*\b(einkaufsliste|einkaufs\s*liste|einkauf)\b/i.test(t)){
@@ -1254,7 +1260,7 @@ async function command(t){
       return;
     }
     if(/\b(nachrichten|news|schlagzeilen)\b/i.test(t) && !/(plan|einkauf)/i.test(t)){
-      await loadNews(); return;
+      location.href="welt-news.html"; return;
     }
     if(/\b(aktien|aktienkurse|börse|boerse|kurse)\b/i.test(t) && !/(plan|einkauf)/i.test(t)){
       await loadStocks(); return;
@@ -1336,8 +1342,6 @@ Nutze klare Abschnitte, sinnvolle Schritte und – falls passend – Tage oder T
     const code = e?.code ? ` [${e.code}]` : "";
     show("Cloud-Fehler" + code + ": " + (e?.message||e));
     console.error("IRON cloud error", e);
-  }finally{
-    if(document.body.dataset.ironActivity==='thinking') window.ironSetActivity?.('ready');
   }
 }
 
@@ -1420,7 +1424,6 @@ if(SR&&voiceBtn){
   recognition.maxAlternatives=1;
 
   recognition.onstart=()=>{
-    window.ironSetActivity?.('listening');
     voiceBtn.classList.add('listening');
     if(voiceStatus) voiceStatus.textContent='LISTENING';
     show('Ich höre zu...');
@@ -1431,13 +1434,11 @@ if(SR&&voiceBtn){
   };
 
   recognition.onend=()=>{
-    if(document.body.dataset.ironActivity==='listening') window.ironSetActivity?.('ready');
     voiceBtn.classList.remove('listening');
     if(voiceStatus) voiceStatus.textContent='STANDBY';
   };
 
   recognition.onerror=e=>{
-    window.ironSetActivity?.('ready');
     voiceBtn.classList.remove('listening');
     if(voiceStatus) voiceStatus.textContent='ERROR';
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -1590,3 +1591,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     const upload=$("#photoUploadBtn"); if(upload) upload.onclick=()=>uploadPhotoLibraryFile().catch(e=>show("Upload-Fehler: "+e.message));
   }
 });
+
+
+window.createTask = createTask;
+window.createCalendarFromCommand = createCalendarFromCommand;
