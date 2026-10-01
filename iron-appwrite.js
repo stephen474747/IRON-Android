@@ -9,6 +9,7 @@
     tables: Object.freeze({
       tasks: "tasks",
       plans: "plans",
+      ideas: "ideas",
       pcCommands: "pccommands",
       pcStatus: "pc_status"
     }),
@@ -146,7 +147,10 @@
 
       async function callWithFreshJWT() {
         const token = await account.createJWT();
-        return fetch(CONFIG.functionDomain + "/api/chat", {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 65000);
+        try { return await fetch(CONFIG.functionDomain + "/api/chat", {
+          signal: controller.signal,
           method: "POST",
           // text/plain keeps this a CORS "simple request" in browsers and
           // avoids a failing OPTIONS preflight on some Function-domain setups.
@@ -159,7 +163,7 @@
             source: (window.IRONMobile?.isNative ? "android" : "web"),
             conversation_id: "main"
           })
-        });
+        }); } finally { clearTimeout(timeout); }
       }
 
       let response;
@@ -167,7 +171,7 @@
         response = await callWithFreshJWT();
       } catch (e) {
         throw new Error(
-          "IRON AI-Function ist aus der Android-App momentan nicht erreichbar. Appwrite-Datenbank ist weiterhin verbunden."
+          e?.name === "AbortError" ? "IRON Cloud antwortet zu langsam. Bitte später erneut versuchen." : "IRON Cloud ist momentan nicht erreichbar. Bitte Internetverbindung und Cloud-URL prüfen."
         );
       }
 
@@ -182,6 +186,11 @@
       if (!response.ok || !payload?.ok) {
         throw new Error(payload?.error || `Cloud-AI HTTP ${response.status}`);
       }
+      if (typeof payload.reply !== "string" || !payload.reply.trim()) {
+        throw new Error("IRON Cloud hat keine Textantwort geliefert.");
+      }
+      window.IRONLastAIModel = payload.model || "unbekannt";
+      window.dispatchEvent(new CustomEvent("iron-ai-response", {detail: {model: window.IRONLastAIModel}}));
       return payload.reply;
     }
 

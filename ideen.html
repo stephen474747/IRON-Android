@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<title>IRON // Ideen</title>
+<link rel="stylesheet" href="style.css?v=770">
+</head>
+<body>
+<div class="grid"></div><div class="scanlines"></div>
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="mark">I</span><div><b>IRON</b><small>PERSONAL SYSTEM</small></div></a>
+  <div class="status"><i></i> IDEEN <b>APPWRITE LIVE</b></div>
+</header>
+<main class="ideas-page">
+  <section class="ideas-heading">
+    <div class="eyebrow">IRON CORE // KREATIVE GEDANKEN</div>
+    <h1>IDEEN<span>.</span></h1>
+    <p>Ein Platz für Einfälle, Projekte und nächste Schritte.</p>
+    <button type="button" class="ideas-primary" id="ideaNew">+ NEUE IDEE</button>
+  </section>
+
+  <section class="ideas-overview" aria-label="Ideenübersicht">
+    <div><small>ALLE</small><strong id="ideaCountAll">0</strong></div>
+    <div><small>NEU</small><strong id="ideaCountNew">0</strong></div>
+    <div><small>IN ARBEIT</small><strong id="ideaCountActive">0</strong></div>
+    <div><small>UMGESETZT</small><strong id="ideaCountDone">0</strong></div>
+  </section>
+
+  <section class="ideas-editor" id="ideaEditor" hidden aria-label="Idee bearbeiten">
+    <div class="ideas-section-title"><h2 id="ideaEditorTitle">Neue Idee</h2><button type="button" class="ideas-quiet" id="ideaCancel">SCHLIESSEN</button></div>
+    <form id="ideaForm">
+      <label for="ideaTitle">Titel <span>*</span></label>
+      <input id="ideaTitle" maxlength="100" required placeholder="Wie heißt deine Idee?" autocomplete="off">
+      <label for="ideaDescription">Beschreibung</label>
+      <textarea id="ideaDescription" maxlength="1500" rows="5" placeholder="Was möchtest du umsetzen? Was ist der nächste Schritt?"></textarea>
+      <div class="ideas-form-row">
+        <div><label for="ideaCategory">Bereich</label><input id="ideaCategory" maxlength="40" placeholder="z. B. IRON, Business, Privat"></div>
+        <div><label for="ideaStatus">Status</label><select id="ideaStatus"><option value="neu">Neu</option><option value="arbeit">In Arbeit</option><option value="fertig">Umgesetzt</option></select></div>
+      </div>
+      <div class="ideas-form-actions"><button type="submit" class="ideas-primary">IDEE SPEICHERN</button><span id="ideaFormMessage" role="status"></span></div>
+    </form>
+  </section>
+
+  <section class="ideas-list-section">
+    <div class="ideas-section-title"><div><span class="eyebrow">DEINE SAMMLUNG</span><h2>Ideenübersicht</h2></div></div>
+    <div class="ideas-toolbar">
+      <label class="ideas-search"><span>⌕</span><input type="search" id="ideaSearch" placeholder="Ideen durchsuchen" aria-label="Ideen durchsuchen"></label>
+      <label class="ideas-filter">Status <select id="ideaFilter"><option value="alle">Alle Ideen</option><option value="neu">Neu</option><option value="arbeit">In Arbeit</option><option value="fertig">Umgesetzt</option></select></label>
+    </div>
+    <p id="ideaNotice" class="ideas-notice" role="status" aria-live="polite"></p>
+    <div id="ideasList" class="ideas-list"></div>
+    <div class="ideas-backup"><span>Ideen werden mit deinem IRON-Konto synchronisiert. Export dient als zusätzliche Sicherung.</span><div><button id="ideaExport" type="button">↓ EXPORT</button><button id="ideaImport" type="button">↑ IMPORT</button></div><input id="ideaImportFile" type="file" accept=".json,application/json" hidden></div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@27.0.0"></script>
+<script src="iron-appwrite.js?v=770"></script>
+<script src="ideen.js?v=710" defer></script>
+<script src="iron-menu.js?v=770" defer></script>
+<script src="mobile-bridge.js?v=770"></script></body>
+</html>
