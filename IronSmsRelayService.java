@@ -108,10 +108,24 @@ public class IronSmsRelayService extends Service {
         } finally { conn.disconnect(); }
     }
 
+    private void flushIncoming() {
+        android.content.SharedPreferences prefs=getSharedPreferences(PREF,MODE_PRIVATE);
+        for(java.util.Map.Entry<String,?> entry:prefs.getAll().entrySet()) {
+            if(!entry.getKey().startsWith("incoming_"))continue;
+            try {
+                JSONObject job=new JSONObject(String.valueOf(entry.getValue()));
+                if(System.currentTimeMillis()-job.optLong("received")>600000){prefs.edit().remove(entry.getKey()).commit();continue;}
+                api("/api/sms/device-command",job);
+                prefs.edit().remove(entry.getKey()).commit();
+            } catch(Exception failure) { /* Retain for bounded retry; never log SMS/PIN. */ }
+        }
+    }
+
     private void tick() {
         try {
             if (!enabled(this)) { stopSelf(); return; }
             flushAcks();
+            flushIncoming();
             if (checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED ||
                     checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return;
             JSONArray jobs = api("/api/sms/device-pending", new JSONObject()).optJSONArray("items");

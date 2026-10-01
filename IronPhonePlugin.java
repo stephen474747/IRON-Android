@@ -35,6 +35,7 @@ import com.getcapacitor.annotation.PermissionCallback;
             alias = "sms",
             strings = {
                 Manifest.permission.SEND_SMS,
+                Manifest.permission.RECEIVE_SMS,
                 Manifest.permission.READ_PHONE_STATE
             }
         )
@@ -151,7 +152,8 @@ public class IronPhonePlugin extends Plugin {
         ) == PackageManager.PERMISSION_GRANTED
         && ContextCompat.checkSelfPermission(
                 getContext(), Manifest.permission.READ_PHONE_STATE
-        ) == PackageManager.PERMISSION_GRANTED;
+        ) == PackageManager.PERMISSION_GRANTED
+        && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED;
     }
 
     @PluginMethod

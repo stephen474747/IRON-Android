@@ -9,7 +9,7 @@ java_dir.mkdir(parents=True, exist_ok=True)
 
 src = root / "native" / "android" / "com" / "iron" / "assistant"
 for name in ["MainActivity.java", "IronPhonePlugin.java", "IronCalendarPlugin.java",
-             "IronSmsRelayService.java", "IronSmsSentReceiver.java", "IronSmsBootReceiver.java"]:
+             "IronSmsRelayService.java", "IronSmsCommandReceiver.java", "IronSmsSentReceiver.java", "IronSmsBootReceiver.java"]:
     shutil.copy2(src / name, java_dir / name)
 
 manifest = android / "app" / "src" / "main" / "AndroidManifest.xml"
@@ -68,3 +68,10 @@ if 'android:name=".IronSmsRelayService"' not in text:
 
 manifest.write_text(text, encoding="utf-8")
 print("IRON Android native patch applied.")
+
+text=manifest.read_text(encoding="utf-8")
+permission='<uses-permission android:name="android.permission.RECEIVE_SMS" />'
+if permission not in text:text=text.replace("<application",permission+"\n<application",1)
+receiver='''<receiver android:name=".IronSmsCommandReceiver" android:exported="true" android:permission="android.permission.BROADCAST_SMS"><intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter></receiver>'''
+if 'android:name=".IronSmsCommandReceiver"' not in text:text=text.replace("</application>",receiver+"\n</application>",1)
+manifest.write_text(text,encoding="utf-8")
